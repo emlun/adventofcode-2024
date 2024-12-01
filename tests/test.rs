@@ -48,3 +48,5 @@ macro_rules! test_day {
         }
     };
 }
+
+test_day!(day01, "2815556", "23927637");
