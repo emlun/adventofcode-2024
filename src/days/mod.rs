@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+pub mod day01;
+
 macro_rules! days {
     ($($day_mod:ident),*) => {
         pub fn get_solver(day: u8) -> Option<fn(&[String]) -> crate::common::Solution> {
@@ -28,3 +30,5 @@ macro_rules! days {
 pub fn all_numbers() -> Vec<u8> {
     (1..=25).filter(|&day| get_solver(day).is_some()).collect()
 }
+
+days!(day01);
