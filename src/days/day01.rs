@@ -1,6 +1,20 @@
-use crate::common::Solution;
+use crate::{common::Solution, util::iter::Countable};
 
-fn solve_a(lines: &[String]) -> u32 {
+fn solve_a(left: &[i32], right: &[i32]) -> u32 {
+    left.iter()
+        .zip(right.iter())
+        .map(|(l, r)| l.abs_diff(*r))
+        .sum()
+}
+
+fn solve_b(left: &[i32], right: &[i32]) -> i32 {
+    let r_counts = right.iter().counts();
+    left.iter()
+        .map(|l| l * (*r_counts.get(l).unwrap_or(&0) as i32))
+        .sum()
+}
+
+pub fn solve(lines: &[String]) -> Solution {
     let (mut left, mut right) = lines.iter().filter(|line| !line.is_empty()).fold(
         (
             Vec::with_capacity(lines.len()),
@@ -17,12 +31,8 @@ fn solve_a(lines: &[String]) -> u32 {
     left.sort();
     right.sort();
 
-    left.into_iter()
-        .zip(right.into_iter())
-        .map(|(l, r): (i32, i32)| l.abs_diff(r))
-        .sum()
-}
-
-pub fn solve(lines: &[String]) -> Solution {
-    (solve_a(lines).to_string(), "".to_string())
+    (
+        solve_a(&left, &right).to_string(),
+        solve_b(&left, &right).to_string(),
+    )
 }
