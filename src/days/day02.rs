@@ -16,21 +16,26 @@
 
 use crate::{common::Solution, util::iter::WithSliding};
 
+fn safe<'a, I, F>(expr: F) -> bool
+where
+    I: Iterator<Item = &'a i32>,
+    F: Fn() -> I,
+    F: 'a,
+{
+    expr()
+        .sliding2()
+        .map(|(a, b)| a - b)
+        .all(|d| (-3..=-1).contains(&d))
+        || expr()
+            .sliding2()
+            .map(|(a, b)| a - b)
+            .all(|d| (1..=3).contains(&d))
+}
+
 fn solve_a(reports: &[Vec<i32>]) -> usize {
     reports
         .iter()
-        .filter(|report| {
-            report
-                .iter()
-                .sliding2()
-                .map(|(a, b)| a - b)
-                .all(|d| (-3..=-1).contains(&d))
-                || report
-                    .iter()
-                    .sliding2()
-                    .map(|(a, b)| a - b)
-                    .all(|d| (1..=3).contains(&d))
-        })
+        .filter(|report| safe(|| report.iter()))
         .count()
 }
 
@@ -38,22 +43,8 @@ fn solve_b(reports: &[Vec<i32>]) -> usize {
     reports
         .iter()
         .filter(|report| {
-            (0..report.len()).any(|i| {
-                report
-                    .iter()
-                    .take(i)
-                    .chain(report.iter().skip(i + 1))
-                    .sliding2()
-                    .map(|(a, b)| a - b)
-                    .all(|d| (-3..=-1).contains(&d))
-                    || report
-                        .iter()
-                        .take(i)
-                        .chain(report.iter().skip(i + 1))
-                        .sliding2()
-                        .map(|(a, b)| a - b)
-                        .all(|d| (1..=3).contains(&d))
-            })
+            (0..report.len())
+                .any(|i| safe(|| report.iter().take(i).chain(report.iter().skip(i + 1))))
         })
         .count()
 }
