@@ -34,6 +34,30 @@ fn solve_a(reports: &[Vec<i32>]) -> usize {
         .count()
 }
 
+fn solve_b(reports: &[Vec<i32>]) -> usize {
+    reports
+        .iter()
+        .filter(|report| {
+            (0..report.len()).any(|i| {
+                report
+                    .iter()
+                    .take(i)
+                    .chain(report.iter().skip(i + 1))
+                    .sliding2()
+                    .map(|(a, b)| a - b)
+                    .all(|d| d <= -1 && d >= -3)
+                    || report
+                        .iter()
+                        .take(i)
+                        .chain(report.iter().skip(i + 1))
+                        .sliding2()
+                        .map(|(a, b)| a - b)
+                        .all(|d| d >= 1 && d <= 3)
+            })
+        })
+        .count()
+}
+
 pub fn solve(lines: &[String]) -> Solution {
     let reports: Vec<Vec<i32>> = lines
         .iter()
@@ -45,5 +69,5 @@ pub fn solve(lines: &[String]) -> Solution {
         })
         .collect();
 
-    (solve_a(&reports).to_string(), "".to_string())
+    (solve_a(&reports).to_string(), solve_b(&reports).to_string())
 }
