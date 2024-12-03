@@ -37,7 +37,7 @@ fn solve_a(lines: &[String]) -> i32 {
 }
 
 fn solve_b(lines: &[String]) -> i32 {
-    lines
+    let (sum, _) = lines
         .iter()
         .flat_map(|line| line.split_inclusive("do()"))
         .flat_map(|segment| segment.split_inclusive("don't()"))
@@ -51,8 +51,8 @@ fn solve_b(lines: &[String]) -> i32 {
                 (enabled && !segment.ends_with("don't()"))
                     || (!enabled && segment.ends_with("do()")),
             )
-        })
-        .0
+        });
+    sum
 }
 
 pub fn solve(lines: &[String]) -> Solution {
