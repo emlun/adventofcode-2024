@@ -16,21 +16,23 @@
 
 use crate::common::Solution;
 
-fn solve_a(lines: &[String]) -> i32 {
-    lines
-        .iter()
-        .flat_map(|line| {
-            line.split("mul(").skip(1).filter_map(|segment| {
-                let mut it = segment.split(',');
-                let first_num = it.next().and_then(|s| s.parse::<i32>().ok())?;
-                let second_num = it
-                    .next()
-                    .and_then(|s| s.split(')').next())
-                    .and_then(|s| s.parse::<i32>().ok())?;
-                Some(first_num * second_num)
-            })
+fn eval_muls(s: &str) -> i32 {
+    s.split("mul(")
+        .skip(1)
+        .filter_map(|segment| {
+            let mut it = segment.split(',');
+            let first_num = it.next().and_then(|s| s.parse::<i32>().ok())?;
+            let second_num = it
+                .next()
+                .and_then(|s| s.split(')').next())
+                .and_then(|s| s.parse::<i32>().ok())?;
+            Some(first_num * second_num)
         })
         .sum()
+}
+
+fn solve_a(lines: &[String]) -> i32 {
+    lines.iter().map(|line| eval_muls(line)).sum()
 }
 
 fn solve_b(lines: &[String]) -> i32 {
@@ -41,19 +43,7 @@ fn solve_b(lines: &[String]) -> i32 {
         .fold((0, true), |(sum, enabled), segment| {
             if enabled {
                 (
-                    sum + segment
-                        .split("mul(")
-                        .skip(1)
-                        .filter_map(|segment| {
-                            let mut it = segment.split(',');
-                            let first_num = it.next().and_then(|s| s.parse::<i32>().ok())?;
-                            let second_num = it
-                                .next()
-                                .and_then(|s| s.split(')').next())
-                                .and_then(|s| s.parse::<i32>().ok())?;
-                            Some(first_num * second_num)
-                        })
-                        .sum::<i32>(),
+                    sum + eval_muls(segment),
                     (enabled && !segment.ends_with("don't()"))
                         || (!enabled && segment.ends_with("do()")),
                 )
