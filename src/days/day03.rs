@@ -41,19 +41,15 @@ fn solve_b(lines: &[String]) -> i32 {
         .flat_map(|line| line.split_inclusive("do()"))
         .flat_map(|segment| segment.split_inclusive("don't()"))
         .fold((0, true), |(sum, enabled), segment| {
-            if enabled {
-                (
-                    sum + eval_muls(segment),
-                    (enabled && !segment.ends_with("don't()"))
-                        || (!enabled && segment.ends_with("do()")),
-                )
-            } else {
-                (
-                    sum,
-                    (enabled && !segment.ends_with("don't()"))
-                        || (!enabled && segment.ends_with("do()")),
-                )
-            }
+            (
+                if enabled {
+                    sum + eval_muls(segment)
+                } else {
+                    sum
+                },
+                (enabled && !segment.ends_with("don't()"))
+                    || (!enabled && segment.ends_with("do()")),
+            )
         })
         .0
 }
