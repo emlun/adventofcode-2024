@@ -14,23 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod day01;
-pub mod day02;
-pub mod day03;
+use crate::{common::Solution, util::iter::WithSliding};
 
-macro_rules! days {
-    ($($day_mod:ident),*) => {
-        pub fn get_solver(day: u8) -> Option<fn(&[String]) -> crate::common::Solution> {
-            match format!("day{:02}", day).as_str() {
-                $(stringify!($day_mod) => Some($day_mod::solve),)*
-                    _ => None,
-            }
-        }
-    };
+fn solve_a(lines: &[String]) -> i32 {
+    lines
+        .iter()
+        .flat_map(|line| {
+            line.split("mul(").skip(1).filter_map(|segment| {
+                let mut it = segment.split(',');
+                let first_num = it.next().and_then(|s| s.parse::<i32>().ok())?;
+                let second_num = it
+                    .next()
+                    .and_then(|s| s.split(')').next())
+                    .and_then(|s| s.parse::<i32>().ok())?;
+                Some(first_num * second_num)
+            })
+        })
+        .sum()
 }
 
-pub fn all_numbers() -> Vec<u8> {
-    (1..=25).filter(|&day| get_solver(day).is_some()).collect()
+pub fn solve(lines: &[String]) -> Solution {
+    (solve_a(lines).to_string(), "".to_string())
 }
-
-days!(day01, day02, day03);
