@@ -24,7 +24,8 @@ fn eval_muls(s: &str) -> i32 {
             let first_num = it.next().and_then(|s| s.parse::<i32>().ok())?;
             let second_num = it
                 .next()
-                .and_then(|s| s.split(')').next())
+                .and_then(|s| s.split_inclusive(')').next())
+                .and_then(|s| s.strip_suffix(')'))
                 .and_then(|s| s.parse::<i32>().ok())?;
             Some(first_num * second_num)
         })
