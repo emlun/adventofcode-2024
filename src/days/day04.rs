@@ -44,6 +44,23 @@ fn solve_a(lines: &[String]) -> usize {
         .sum()
 }
 
+fn solve_b(lines: &[String]) -> usize {
+    (1..lines.len() - 1)
+        .flat_map(|r| (1..lines[r].len() - 1).map(move |c| (r, c)))
+        .filter(|(r, c)| {
+            lines[*r].chars().nth(*c) == Some('A') && {
+                let tl = lines[r - 1].chars().nth(c - 1).unwrap();
+                let tr = lines[r - 1].chars().nth(c + 1).unwrap();
+                let bl = lines[r + 1].chars().nth(c - 1).unwrap();
+                let br = lines[r + 1].chars().nth(c + 1).unwrap();
+
+                ((tl == 'M' && br == 'S') || (tl == 'S' && br == 'M'))
+                    && ((bl == 'M' && tr == 'S') || (bl == 'S' && tr == 'M'))
+            }
+        })
+        .count()
+}
+
 pub fn solve(lines: &[String]) -> Solution {
-    (solve_a(lines).to_string(), "".to_string())
+    (solve_a(lines).to_string(), solve_b(lines).to_string())
 }
