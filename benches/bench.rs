@@ -66,4 +66,4 @@ macro_rules! setup_benchmark {
     };
 }
 
-setup_benchmark!(day01, day02, day03, day04);
+setup_benchmark!(day01, day02, day03, day04, day05);
