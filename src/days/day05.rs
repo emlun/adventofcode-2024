@@ -41,7 +41,7 @@ fn solve_a(lines: &[String]) -> u32 {
                 .iter()
                 .scan((true, HashSet::new()), |(valid, before), next| {
                     *valid = rules
-                        .get(&next)
+                        .get(next)
                         .map(|rule| {
                             before.is_superset(&rule.intersection(&seqset).copied().collect())
                         })
@@ -82,7 +82,7 @@ fn solve_b(lines: &[String]) -> u32 {
                 .iter()
                 .scan((true, HashSet::new()), |(valid, before), next| {
                     *valid = rules
-                        .get(&next)
+                        .get(next)
                         .map(|rule| {
                             before.is_superset(&rule.intersection(&seqset).copied().collect())
                         })
@@ -94,7 +94,7 @@ fn solve_b(lines: &[String]) -> u32 {
             {
                 let sortedseq: Vec<u32> =
                     seqset.into_iter().fold(Vec::new(), |mut sorted, next| {
-                        if let Some((insert_i, _)) = sorted.iter().enumerate().find(|(i, el)| {
+                        if let Some((insert_i, _)) = sorted.iter().enumerate().find(|(_, el)| {
                             rules
                                 .get(el)
                                 .map(|rule| rule.contains(&next))
