@@ -16,43 +16,37 @@
 
 use crate::common::Solution;
 
-fn solve_a(lines: &[String]) -> usize {
-    (0..lines.len())
-        .flat_map(|r| (0..lines[r].len()).map(move |c| (r as isize, c as isize)))
+fn solve_a(grid: &[Vec<char>]) -> usize {
+    (0..grid.len())
+        .flat_map(|r| (0..grid[r].len()).map(move |c| (r as isize, c as isize)))
         .map(|(r, c)| {
             (-1_isize..=1)
                 .flat_map(|dr| (-1_isize..=1).map(move |dc| (dr, dc)))
                 .filter(|drc| *drc != (0, 0))
                 .filter(|(dr, dc)| {
-                    (0..lines.len() as isize).contains(&(r + 3 * dr))
-                        && (0..lines[0].len() as isize).contains(&(c + 3 * dc))
+                    (0..grid.len() as isize).contains(&(r + 3 * dr))
+                        && (0..grid[0].len() as isize).contains(&(c + 3 * dc))
                 })
                 .filter(|(dr, dc)| {
-                    lines[r as usize].chars().nth(c as usize) == Some('X')
-                        && lines[(r + dr) as usize].chars().nth((c + dc) as usize) == Some('M')
-                        && lines[(r + 2 * dr) as usize]
-                            .chars()
-                            .nth((c + 2 * dc) as usize)
-                            == Some('A')
-                        && lines[(r + 3 * dr) as usize]
-                            .chars()
-                            .nth((c + 3 * dc) as usize)
-                            == Some('S')
+                    grid[r as usize][c as usize] == 'X'
+                        && grid[(r + dr) as usize][(c + dc) as usize] == 'M'
+                        && grid[(r + 2 * dr) as usize][(c + 2 * dc) as usize] == 'A'
+                        && grid[(r + 3 * dr) as usize][(c + 3 * dc) as usize] == 'S'
                 })
                 .count()
         })
         .sum()
 }
 
-fn solve_b(lines: &[String]) -> usize {
-    (1..lines.len() - 1)
-        .flat_map(|r| (1..lines[r].len() - 1).map(move |c| (r, c)))
+fn solve_b(grid: &[Vec<char>]) -> usize {
+    (1..grid.len() - 1)
+        .flat_map(|r| (1..grid[r].len() - 1).map(move |c| (r, c)))
         .filter(|(r, c)| {
-            lines[*r].chars().nth(*c) == Some('A') && {
-                let tl = lines[r - 1].chars().nth(c - 1).unwrap();
-                let tr = lines[r - 1].chars().nth(c + 1).unwrap();
-                let bl = lines[r + 1].chars().nth(c - 1).unwrap();
-                let br = lines[r + 1].chars().nth(c + 1).unwrap();
+            let tl = grid[r - 1][c - 1];
+            grid[*r][*c] == 'A' && {
+                let tr = grid[r - 1][c + 1];
+                let bl = grid[r + 1][c - 1];
+                let br = grid[r + 1][c + 1];
 
                 ((tl == 'M' && br == 'S') || (tl == 'S' && br == 'M'))
                     && ((bl == 'M' && tr == 'S') || (bl == 'S' && tr == 'M'))
@@ -62,5 +56,10 @@ fn solve_b(lines: &[String]) -> usize {
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    (solve_a(lines).to_string(), solve_b(lines).to_string())
+    let grid: Vec<Vec<char>> = lines
+        .iter()
+        .filter(|line| !line.is_empty())
+        .map(|line| line.chars().collect())
+        .collect();
+    (solve_a(&grid).to_string(), solve_b(&grid).to_string())
 }
