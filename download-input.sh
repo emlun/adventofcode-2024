@@ -18,4 +18,4 @@ if check_time; then
   while check_time; do sleep 1; done
 fi
 
-curl --cookie "session=${SESSION_COOKIE}" "https://adventofcode.com/${YEAR}/day/${DAY}/input" | tee "inputs/day${DAY_0}.in"
+curl --silent --cookie "session=${SESSION_COOKIE}" "https://adventofcode.com/${YEAR}/day/${DAY}/input" | tee "inputs/day${DAY_0}.in"
