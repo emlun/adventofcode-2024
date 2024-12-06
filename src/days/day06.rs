@@ -18,31 +18,51 @@ use std::collections::HashSet;
 
 use crate::common::Solution;
 
-fn step(r: usize, c: usize, dir: u8) -> Option<(usize, usize)> {
-    Some(match dir {
-        0 => (r.checked_sub(1)?, c),
-        1 => (r, c + 1),
-        2 => (r + 1, c),
-        3 => (r, c.checked_sub(1)?),
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+struct Pos {
+    r: usize,
+    c: usize,
+    dir: u8,
+}
+
+fn step(Pos { r, c, dir }: &Pos) -> Option<Pos> {
+    let (rr, cc) = match dir {
+        0 => (r.checked_sub(1)?, *c),
+        1 => (*r, c + 1),
+        2 => (r + 1, *c),
+        3 => (*r, c.checked_sub(1)?),
         _ => unreachable!(),
+    };
+    Some(Pos {
+        r: rr,
+        c: cc,
+        dir: *dir,
     })
 }
 
-fn trace_path(map: &[Vec<bool>], start: (usize, usize, u8)) -> (Vec<(usize, usize, u8)>, bool) {
+fn trace_path(map: &[Vec<bool>], start: Pos) -> (Vec<Pos>, bool) {
     let mut is_loop = false;
     let mut visited = HashSet::new();
     (
-        std::iter::successors(Some(start), |(r, c, dir)| {
-            if visited.contains(&(*r, *c, *dir)) {
+        std::iter::successors(Some(start), |pos @ Pos { r, c, dir }| {
+            if visited.contains(pos) {
                 is_loop = true;
                 None
             } else {
-                visited.insert((*r, *c, *dir));
-                let (rr, cc) = step(*r, *c, *dir)?;
+                visited.insert(*pos);
+                let Pos { r: rr, c: cc, .. } = step(pos)?;
                 Some(if *map.get(rr)?.get(cc)? {
-                    (*r, *c, (dir + 1) % 4)
+                    Pos {
+                        r: *r,
+                        c: *c,
+                        dir: (dir + 1) % 4,
+                    }
                 } else {
-                    (rr, cc, *dir)
+                    Pos {
+                        r: rr,
+                        c: cc,
+                        dir: *dir,
+                    }
                 })
             }
         })
@@ -51,22 +71,19 @@ fn trace_path(map: &[Vec<bool>], start: (usize, usize, u8)) -> (Vec<(usize, usiz
     )
 }
 
-fn solve_a(path: &[(usize, usize, u8)]) -> usize {
+fn solve_a(path: &[Pos]) -> usize {
     path.iter()
-        .map(|(r, c, _)| (r, c))
+        .map(|Pos { r, c, .. }| (r, c))
         .collect::<HashSet<_>>()
         .len()
 }
 
-fn solve_b(
-    mut map: Vec<Vec<bool>>,
-    start: (usize, usize, u8),
-    path: &[(usize, usize, u8)],
-) -> usize {
+fn solve_b(mut map: Vec<Vec<bool>>, start: Pos, path: &[Pos]) -> usize {
     let candidate_coords: HashSet<(usize, usize)> = path
         .iter()
-        .flat_map(|(r, c, dir)| step(*r, *c, *dir))
-        .filter(|(r, c)| *r < map.len() && *c < map[0].len())
+        .flat_map(|pos| step(&pos))
+        .filter(|Pos { r, c, .. }| *r < map.len() && *c < map[0].len())
+        .map(|Pos { r, c, .. }| (r, c))
         .collect();
     candidate_coords
         .into_iter()
@@ -84,7 +101,7 @@ fn solve_b(
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let (start, map): (Option<(usize, usize, u8)>, Vec<Vec<bool>>) = lines
+    let (start, map): (Option<Pos>, Vec<Vec<bool>>) = lines
         .iter()
         .filter(|line| !line.is_empty())
         .enumerate()
@@ -97,7 +114,7 @@ pub fn solve(lines: &[String]) -> Solution {
                         .map(|(c, ch)| match ch {
                             '#' => true,
                             '^' => {
-                                start = Some((r, c, 0));
+                                start = Some(Pos { r, c, dir: 0 });
                                 false
                             }
                             _ => false,
