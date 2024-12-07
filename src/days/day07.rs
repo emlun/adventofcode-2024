@@ -26,11 +26,11 @@ fn concat(a: i64, b: i64) -> i64 {
     }
 }
 
-fn can_solve(lhs: i64, acc: i64, rhs: &[i64], allow_concat: bool) -> bool {
+fn can_solve<const CONCAT: bool>(lhs: i64, acc: i64, rhs: &[i64]) -> bool {
     if let Some((head, tail)) = rhs.split_first() {
-        can_solve(lhs, acc + head, tail, allow_concat)
-            || can_solve(lhs, acc * head, tail, allow_concat)
-            || (allow_concat && can_solve(lhs, concat(acc, *head), tail, allow_concat))
+        can_solve::<{ CONCAT }>(lhs, acc + head, tail)
+            || can_solve::<{ CONCAT }>(lhs, acc * head, tail)
+            || (CONCAT && can_solve::<{ CONCAT }>(lhs, concat(acc, *head), tail))
     } else {
         lhs == acc
     }
@@ -39,13 +39,13 @@ fn can_solve(lhs: i64, acc: i64, rhs: &[i64], allow_concat: bool) -> bool {
 fn solve_a(equations: &[Equation]) -> (Vec<&Equation>, Vec<&Equation>) {
     equations
         .iter()
-        .partition(|(lhs, rhs)| can_solve(*lhs, rhs[0], &rhs[1..], false))
+        .partition(|(lhs, rhs)| can_solve::<false>(*lhs, rhs[0], &rhs[1..]))
 }
 
 fn solve_b(equations: &[&Equation]) -> i64 {
     equations
         .iter()
-        .filter(|(lhs, rhs)| can_solve(*lhs, rhs[0], &rhs[1..], true))
+        .filter(|(lhs, rhs)| can_solve::<true>(*lhs, rhs[0], &rhs[1..]))
         .map(|(lhs, _)| lhs)
         .sum()
 }
