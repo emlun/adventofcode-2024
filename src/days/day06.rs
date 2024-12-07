@@ -81,7 +81,7 @@ fn solve_a(path: &[Pos]) -> usize {
 fn solve_b(mut map: Vec<Vec<bool>>, start: Pos, path: &[Pos]) -> usize {
     let candidate_coords: HashSet<(usize, usize)> = path
         .iter()
-        .flat_map(|pos| step(&pos))
+        .flat_map(step)
         .filter(|Pos { r, c, .. }| *r < map.len() && *c < map[0].len())
         .map(|Pos { r, c, .. }| (r, c))
         .collect();
