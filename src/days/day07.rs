@@ -16,17 +16,17 @@
 
 use crate::common::Solution;
 
-type Equation = (i64, Vec<i64>);
+type Equation = (u64, Vec<u64>);
 
-fn concat(a: i64, b: i64) -> i64 {
+fn concat(a: u64, b: u64) -> u64 {
     if b == 0 {
         a * 10
     } else {
-        a * 10_i64.pow(1 + b.ilog10()) + b
+        a * 10_u64.pow(1 + b.ilog10()) + b
     }
 }
 
-fn can_solve<const CONCAT: bool>(lhs: i64, acc: i64, rhs: &[i64]) -> bool {
+fn can_solve<const CONCAT: bool>(lhs: u64, acc: u64, rhs: &[u64]) -> bool {
     if let Some((head, tail)) = rhs.split_first() {
         can_solve::<{ CONCAT }>(lhs, acc + head, tail)
             || can_solve::<{ CONCAT }>(lhs, acc * head, tail)
@@ -42,7 +42,7 @@ fn solve_a(equations: &[Equation]) -> (Vec<&Equation>, Vec<&Equation>) {
         .partition(|(lhs, rhs)| can_solve::<false>(*lhs, rhs[0], &rhs[1..]))
 }
 
-fn solve_b(equations: &[&Equation]) -> i64 {
+fn solve_b(equations: &[&Equation]) -> u64 {
     equations
         .iter()
         .filter(|(lhs, rhs)| can_solve::<true>(*lhs, rhs[0], &rhs[1..]))
@@ -64,7 +64,7 @@ pub fn solve(lines: &[String]) -> Solution {
         .collect();
 
     let (sol, unsol) = solve_a(&equations);
-    let solution_a: i64 = sol.iter().map(|(lhs, _)| lhs).sum();
+    let solution_a: u64 = sol.iter().map(|(lhs, _)| lhs).sum();
 
     (
         solution_a.to_string(),
