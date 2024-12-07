@@ -16,6 +16,8 @@
 
 use crate::common::Solution;
 
+type Equation = (i64, Vec<i64>);
+
 fn concat(a: i64, b: i64) -> i64 {
     if b == 0 {
         a * 10
@@ -34,15 +36,13 @@ fn can_solve(lhs: i64, acc: i64, rhs: &[i64], allow_concat: bool) -> bool {
     }
 }
 
-fn solve_a(equations: &[(i64, Vec<i64>)]) -> i64 {
+fn solve_a(equations: &[Equation]) -> (Vec<&Equation>, Vec<&Equation>) {
     equations
         .iter()
-        .filter(|(lhs, rhs)| can_solve(*lhs, rhs[0], &rhs[1..], false))
-        .map(|(lhs, _)| lhs)
-        .sum()
+        .partition(|(lhs, rhs)| can_solve(*lhs, rhs[0], &rhs[1..], false))
 }
 
-fn solve_b(equations: &[(i64, Vec<i64>)]) -> i64 {
+fn solve_b(equations: &[&Equation]) -> i64 {
     equations
         .iter()
         .filter(|(lhs, rhs)| can_solve(*lhs, rhs[0], &rhs[1..], true))
@@ -51,23 +51,23 @@ fn solve_b(equations: &[(i64, Vec<i64>)]) -> i64 {
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let equations: Vec<(i64, Vec<i64>)> = lines
+    let equations: Vec<Equation> = lines
         .iter()
         .filter(|line| !line.is_empty())
         .map(|line| {
             let (lhs, rhs) = line.split_once(':').unwrap();
             (
                 lhs.parse().unwrap(),
-                rhs.trim()
-                    .split_whitespace()
-                    .map(|s| s.parse().unwrap())
-                    .collect(),
+                rhs.split_whitespace().map(|s| s.parse().unwrap()).collect(),
             )
         })
         .collect();
 
+    let (sol, unsol) = solve_a(&equations);
+    let solution_a: i64 = sol.iter().map(|(lhs, _)| lhs).sum();
+
     (
-        solve_a(&equations).to_string(),
-        solve_b(&equations).to_string(),
+        solution_a.to_string(),
+        (solution_a + solve_b(&unsol)).to_string(),
     )
 }
