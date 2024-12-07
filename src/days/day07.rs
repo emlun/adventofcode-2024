@@ -27,12 +27,16 @@ fn concat(a: u64, b: u64) -> u64 {
 }
 
 fn can_solve<const CONCAT: bool>(lhs: u64, acc: u64, rhs: &[u64]) -> bool {
-    if let Some((head, tail)) = rhs.split_first() {
-        can_solve::<{ CONCAT }>(lhs, acc + head, tail)
-            || can_solve::<{ CONCAT }>(lhs, acc * head, tail)
-            || (CONCAT && can_solve::<{ CONCAT }>(lhs, concat(acc, *head), tail))
+    if acc <= lhs {
+        if let Some((head, tail)) = rhs.split_first() {
+            can_solve::<{ CONCAT }>(lhs, acc + head, tail)
+                || can_solve::<{ CONCAT }>(lhs, acc * head, tail)
+                || (CONCAT && can_solve::<{ CONCAT }>(lhs, concat(acc, *head), tail))
+        } else {
+            lhs == acc
+        }
     } else {
-        lhs == acc
+        false
     }
 }
 
