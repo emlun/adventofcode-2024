@@ -17,9 +17,10 @@
 use crate::common::Solution;
 
 fn can_solve(lhs: i64, acc: i64, rhs: &[i64]) -> bool {
-    match rhs.len() {
-        0 => lhs == acc,
-        _ => can_solve(lhs, acc + rhs[0], &rhs[1..]) || can_solve(lhs, acc * rhs[0], &rhs[1..]),
+    if let Some((head, tail)) = rhs.split_first() {
+        can_solve(lhs, acc + head, tail) || can_solve(lhs, acc * head, tail)
+    } else {
+        lhs == acc
     }
 }
 
