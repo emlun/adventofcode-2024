@@ -37,7 +37,7 @@ fn can_solve(lhs: i64, acc: i64, rhs: &[i64], allow_concat: bool) -> bool {
 fn solve_a(equations: &[(i64, Vec<i64>)]) -> i64 {
     equations
         .iter()
-        .filter(|(lhs, rhs)| can_solve(*lhs, 0, rhs, false))
+        .filter(|(lhs, rhs)| can_solve(*lhs, rhs[0], &rhs[1..], false))
         .map(|(lhs, _)| lhs)
         .sum()
 }
