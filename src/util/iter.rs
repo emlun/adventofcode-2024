@@ -53,6 +53,44 @@ where
 
 impl<I> WithSliding for I where I: Iterator {}
 
+pub struct Pairs<'a, T> {
+    seq: &'a [T],
+    i: usize,
+    j: usize,
+}
+
+impl<'a, T> Iterator for Pairs<'a, T>
+where
+    T: 'a,
+{
+    type Item = (&'a T, &'a T);
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+        let a = self.seq.get(self.i)?;
+        let b = self.seq.get(self.j)?;
+        self.j = (self.j + 1) % self.seq.len();
+        if self.j == 0 {
+            self.i += 1;
+            self.j = self.i + 1;
+        }
+        Some((a, b))
+    }
+}
+
+pub trait WithPairs<T>
+where
+    Self: AsRef<[T]>,
+{
+    fn pairs(&self) -> Pairs<T> {
+        Pairs {
+            seq: self.as_ref(),
+            i: 0,
+            j: 1,
+        }
+    }
+}
+
+impl<I, T> WithPairs<T> for I where I: AsRef<[T]> {}
+
 pub trait LazyProduct<Int>
 where
     Self: Iterator<Item = Int>,
