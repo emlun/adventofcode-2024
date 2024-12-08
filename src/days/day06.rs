@@ -25,6 +25,79 @@ struct Pos {
     dir: u8,
 }
 
+struct Map {
+    obstacles_r: Vec<Vec<usize>>,
+    obstacles_c: Vec<Vec<usize>>,
+}
+
+impl Map {
+    fn new(map: &[Vec<bool>]) -> Self {
+        Self {
+            obstacles_r: map
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .enumerate()
+                        .filter(|(_, cell)| **cell)
+                        .map(|(c, _)| c)
+                        .collect()
+                })
+                .collect(),
+            obstacles_c: (0..map[0].len())
+                .map(|c| (0..map.len()).filter(|r| map[*r][c]).collect())
+                .collect(),
+        }
+    }
+
+    fn with_obstacle(&self, r: usize, c: usize) -> Self {
+        Self {
+            obstacles_r: {
+                let mut o = self.obstacles_r.clone();
+                o[r].push(c);
+                o[r].sort();
+                o
+            },
+            obstacles_c: {
+                let mut o = self.obstacles_c.clone();
+                o[c].push(r);
+                o[c].sort();
+                o
+            },
+        }
+    }
+
+    fn seek(&self, pos: &Pos) -> Option<Pos> {
+        let (rr, cc) = match pos.dir {
+            0 => {
+                let ri = self.obstacles_c[pos.c].partition_point(|rr| *rr < pos.r);
+                let rr = self.obstacles_c[pos.c].get(ri.checked_sub(1)?)? + 1;
+                Some((rr, pos.c)).filter(|(rr, _)| *rr <= pos.r)
+            }
+            1 => {
+                let ci = self.obstacles_r[pos.r].partition_point(|cc| *cc <= pos.c);
+                let cc = self.obstacles_r[pos.r].get(ci)? - 1;
+                Some((pos.r, cc)).filter(|(_, cc)| *cc >= pos.c)
+            }
+            2 => {
+                let ri = self.obstacles_c[pos.c].partition_point(|rr| *rr <= pos.r);
+                let rr = self.obstacles_c[pos.c].get(ri)? - 1;
+                Some((rr, pos.c)).filter(|(rr, _)| *rr >= pos.r)
+            }
+            3 => {
+                let ci = self.obstacles_r[pos.r].partition_point(|cc| *cc < pos.c);
+                let cc = self.obstacles_r[pos.r].get(ci.checked_sub(1)?)? + 1;
+                Some((pos.r, cc)).filter(|(_, cc)| *cc <= pos.c)
+            }
+            _ => unreachable!(),
+        }?;
+        Some(Pos {
+            r: rr,
+            c: cc,
+            dir: (pos.dir + 1) % 4,
+        })
+    }
+}
+
 fn step(Pos { r, c, dir }: &Pos) -> Option<Pos> {
     let (rr, cc) = match dir {
         0 => (r.checked_sub(1)?, *c),
@@ -71,6 +144,20 @@ fn trace_path(map: &[Vec<bool>], start: Pos) -> (Vec<Pos>, bool) {
     )
 }
 
+fn is_loop(map: &Map, start: Pos) -> bool {
+    let mut visited = HashSet::new();
+    let mut pos = start;
+    while let Some(new_pos) = map.seek(&pos) {
+        if visited.contains(&new_pos) {
+            return true;
+        } else {
+            visited.insert(new_pos);
+            pos = new_pos;
+        }
+    }
+    false
+}
+
 fn solve_a(path: &[Pos]) -> usize {
     path.iter()
         .map(|Pos { r, c, .. }| (r, c))
@@ -78,7 +165,8 @@ fn solve_a(path: &[Pos]) -> usize {
         .len()
 }
 
-fn solve_b(mut map: Vec<Vec<bool>>, start: Pos, path: &[Pos]) -> usize {
+fn solve_b(map: Vec<Vec<bool>>, start: Pos, path: &[Pos]) -> usize {
+    let obstacle_map = Map::new(&map);
     let candidate_coords: HashSet<(usize, usize)> = path
         .iter()
         .flat_map(step)
@@ -89,10 +177,7 @@ fn solve_b(mut map: Vec<Vec<bool>>, start: Pos, path: &[Pos]) -> usize {
         .into_iter()
         .filter(|(r, c)| {
             if !map[*r][*c] {
-                map[*r][*c] = true;
-                let (_, is_loop) = trace_path(&map, start);
-                map[*r][*c] = false;
-                is_loop
+                is_loop(&obstacle_map.with_obstacle(*r, *c), start)
             } else {
                 false
             }
