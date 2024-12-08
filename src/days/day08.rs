@@ -32,6 +32,26 @@ fn solve_a(map: &HashMap<char, Vec<(isize, isize)>>, maxr: isize, maxc: isize) -
         .len()
 }
 
+fn solve_b(map: &HashMap<char, Vec<(isize, isize)>>, maxr: isize, maxc: isize) -> usize {
+    map.values()
+        .flat_map(|antennae| {
+            antennae.pairs().flat_map(|((ra, ca), (rb, cb))| {
+                let dr = rb - ra;
+                let dc = cb - ca;
+                core::iter::successors(Some((*ra, *ca)), move |(r, c)| Some((*r + dr, *c + dc)))
+                    .take_while(|(r, c)| (0..maxr).contains(r) && (0..maxc).contains(c))
+                    .chain(
+                        core::iter::successors(Some((*ra, *ca)), move |(r, c)| {
+                            Some((*r - dr, *c - dc))
+                        })
+                        .take_while(|(r, c)| (0..maxr).contains(r) && (0..maxc).contains(c)),
+                    )
+            })
+        })
+        .collect::<HashSet<(isize, isize)>>()
+        .len()
+}
+
 pub fn solve(lines: &[String]) -> Solution {
     let map: HashMap<char, Vec<(isize, isize)>> = lines
         .iter()
@@ -51,5 +71,8 @@ pub fn solve(lines: &[String]) -> Solution {
     let maxr = lines.iter().filter(|line| !line.is_empty()).count() as isize;
     let maxc = lines[0].len() as isize;
 
-    (solve_a(&map, maxr, maxc).to_string(), "".to_string())
+    (
+        solve_a(&map, maxr, maxc).to_string(),
+        solve_b(&map, maxr, maxc).to_string(),
+    )
 }
