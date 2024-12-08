@@ -18,34 +18,26 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{common::Solution, util::iter::WithPairs};
 
-fn solve_a(map: &HashMap<char, Vec<(isize, isize)>>, maxr: isize, maxc: isize) -> usize {
+fn solve_ab(
+    map: &HashMap<char, Vec<(isize, isize)>>,
+    maxr: isize,
+    maxc: isize,
+    skip: usize,
+    take: usize,
+) -> usize {
     map.values()
         .flat_map(|antennae| {
             antennae.pairs().flat_map(|((ra, ca), (rb, cb))| {
-                let dr = rb - ra;
-                let dc = cb - ca;
-                [(ra - dr, ca - dc), (rb + dr, cb + dc)]
-            })
-        })
-        .filter(|(r, c)| (0..maxr).contains(r) && (0..maxc).contains(c))
-        .collect::<HashSet<_>>()
-        .len()
-}
-
-fn solve_b(map: &HashMap<char, Vec<(isize, isize)>>, maxr: isize, maxc: isize) -> usize {
-    map.values()
-        .flat_map(|antennae| {
-            antennae.pairs().flat_map(|((ra, ca), (rb, cb))| {
-                let dr = rb - ra;
-                let dc = cb - ca;
-                core::iter::successors(Some((*ra, *ca)), move |(r, c)| Some((*r + dr, *c + dc)))
+                let (dr, dc) = (rb - ra, cb - ca);
+                let line = |r0, c0, dr, dc| {
+                    core::iter::successors(Some((r0, c0)), move |(r, c): &(isize, isize)| {
+                        Some((*r + dr, *c + dc))
+                    })
+                    .skip(skip)
+                    .take(take)
                     .take_while(|(r, c)| (0..maxr).contains(r) && (0..maxc).contains(c))
-                    .chain(
-                        core::iter::successors(Some((*ra, *ca)), move |(r, c)| {
-                            Some((*r - dr, *c - dc))
-                        })
-                        .take_while(|(r, c)| (0..maxr).contains(r) && (0..maxc).contains(c)),
-                    )
+                };
+                line(*ra, *ca, -dr, -dc).chain(line(*rb, *cb, dr, dc))
             })
         })
         .collect::<HashSet<(isize, isize)>>()
@@ -67,12 +59,10 @@ pub fn solve(lines: &[String]) -> Solution {
             map.entry(freq).or_default().push((r, c));
             map
         });
-
     let maxr = lines.iter().filter(|line| !line.is_empty()).count() as isize;
     let maxc = lines[0].len() as isize;
-
     (
-        solve_a(&map, maxr, maxc).to_string(),
-        solve_b(&map, maxr, maxc).to_string(),
+        solve_ab(&map, maxr, maxc, 1, 1).to_string(),
+        solve_ab(&map, maxr, maxc, 0, usize::MAX).to_string(),
     )
 }
