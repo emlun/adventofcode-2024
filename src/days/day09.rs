@@ -90,23 +90,18 @@ fn defragment(mut fs: Vec<Fragment>) -> Vec<Fragment> {
     fs
 }
 
-fn solve_a(fs: Vec<Fragment>) -> usize {
-    let mut fs = fs;
-    let fs_defrag = loop {
-        match enfragment(fs) {
-            Ok(fs2) => {
-                fs = fs2;
-            }
+fn solve_a(mut fs: Vec<Fragment>) -> usize {
+    loop {
+        fs = match enfragment(fs) {
+            Ok(fs2) => fs2,
             Err(fs2) => {
                 break fs2;
             }
-        }
-    };
-
-    fs_defrag
-        .into_iter()
-        .map(|f| (f.start..f.end).sum::<usize>() * f.id)
-        .sum()
+        };
+    }
+    .into_iter()
+    .map(|f| (f.start..f.end).sum::<usize>() * f.id)
+    .sum()
 }
 
 fn solve_b(fs: Vec<Fragment>) -> usize {
