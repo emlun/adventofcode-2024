@@ -21,21 +21,6 @@ use std::{
 
 use crate::common::Solution;
 
-#[derive(Clone, Debug)]
-struct Filesystem {
-    files: BTreeSet<Fragment>,
-    gaps: BTreeSet<Gap>,
-}
-
-impl Filesystem {
-    fn new() -> Self {
-        Self {
-            files: BTreeSet::new(),
-            gaps: BTreeSet::new(),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Fragment {
     id: usize,
@@ -55,60 +40,45 @@ impl PartialOrd for Fragment {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct Gap {
-    start: usize,
-    len: usize,
-}
-
-impl Ord for Gap {
-    fn cmp(&self, other: &Self) -> Ordering {
-        (self.start, self.len).cmp(&(other.start, other.len))
-    }
-}
-
-impl PartialOrd for Gap {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-fn enfragment(mut fs: Filesystem) -> Result<Filesystem, Filesystem> {
-    if let Some(frag) = fs.files.pop_last() {
-        if let Some(gap) = fs.gaps.pop_first() {
-            let len = std::cmp::min(frag.len, gap.len);
-            fs.files.insert(Fragment {
+fn enfragment(
+    mut files: BTreeSet<Fragment>,
+    mut gaps: BTreeSet<(usize, usize)>,
+) -> Result<
+    (BTreeSet<Fragment>, BTreeSet<(usize, usize)>),
+    (BTreeSet<Fragment>, BTreeSet<(usize, usize)>),
+> {
+    if let Some(frag) = files.pop_last() {
+        if let Some((gap_start, gap_len)) = gaps.pop_first() {
+            let len = std::cmp::min(frag.len, gap_len);
+            files.insert(Fragment {
                 id: frag.id,
-                start: gap.start,
+                start: gap_start,
                 len,
             });
 
             if frag.len > len {
-                fs.files.insert(Fragment {
+                files.insert(Fragment {
                     id: frag.id,
                     start: frag.start,
                     len: frag.len - len,
                 });
             }
 
-            if gap.len > len {
-                fs.gaps.insert(Gap {
-                    start: gap.start + len,
-                    len: gap.len - len,
-                });
+            if gap_len > len {
+                gaps.insert((gap_start + len, gap_len - len));
             }
-            Ok(fs)
+            Ok((files, gaps))
         } else {
-            let start = fs.files.last().map(|file| file.start + file.len).unwrap();
-            fs.files.insert(Fragment {
+            let start = files.last().map(|file| file.start + file.len).unwrap();
+            files.insert(Fragment {
                 id: frag.id,
                 start,
                 len: frag.len,
             });
-            Err(fs)
+            Err((files, gaps))
         }
     } else {
-        Err(fs)
+        Err((files, gaps))
     }
 }
 
@@ -139,16 +109,15 @@ fn defragment(
     files
 }
 
-fn solve_a(mut fs: Filesystem) -> usize {
+fn solve_a(mut files: BTreeSet<Fragment>, mut gaps: BTreeSet<(usize, usize)>) -> usize {
     loop {
-        fs = match enfragment(fs) {
+        (files, gaps) = match enfragment(files, gaps) {
             Ok(fs2) => fs2,
-            Err(fs2) => {
-                break fs2;
+            Err((files, _)) => {
+                break files;
             }
         };
     }
-    .files
     .into_iter()
     .map(|f| (f.start..(f.start + f.len)).sum::<usize>() * f.id)
     .sum()
@@ -162,40 +131,41 @@ fn solve_b(files: Vec<Fragment>, gaps: BTreeMap<usize, BTreeSet<usize>>) -> usiz
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let (_, _, _, fs): (_, _, _, Filesystem) = lines
+    let (_, _, _, files, gaps): (_, _, _, Vec<Fragment>, BTreeSet<(usize, usize)>) = lines
         .iter()
         .filter(|line| !line.is_empty())
         .flat_map(|line| line.chars())
         .map(|ch| ch.to_digit(10).unwrap() as usize)
         .fold(
-            (0, 0, true, Filesystem::new()),
-            |(start, mut next_id, is_file, mut fs), len| {
+            (0, 0, true, Vec::new(), BTreeSet::new()),
+            |(start, mut next_id, is_file, mut files, mut gaps), len| {
                 if len > 0 {
                     if is_file {
-                        fs.files.insert(Fragment {
+                        files.push(Fragment {
                             id: next_id,
                             start,
                             len,
                         });
                         next_id += 1;
                     } else {
-                        fs.gaps.insert(Gap { start, len });
+                        gaps.insert((start, len));
                     }
-                    (start + len, next_id, !is_file, fs)
+                    (start + len, next_id, !is_file, files, gaps)
                 } else {
-                    (start, next_id, !is_file, fs)
+                    (start, next_id, !is_file, files, gaps)
                 }
             },
         );
 
     (
-        solve_a(fs.clone()).to_string(),
+        solve_a(files.iter().cloned().collect(), gaps.clone()).to_string(),
         solve_b(
-            fs.files.into_iter().collect(),
-            fs.gaps.into_iter().fold(BTreeMap::new(), |mut gaps, gap| {
-                gaps.entry(gap.len).or_default().insert(gap.start);
-                gaps
-            }),
+            files,
+            gaps.into_iter()
+                .fold(BTreeMap::new(), |mut gaps, (start, len)| {
+                    gaps.entry(len).or_default().insert(start);
+                    gaps
+                }),
         )
         .to_string(),
     )
