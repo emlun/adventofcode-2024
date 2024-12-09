@@ -16,7 +16,7 @@
 
 use crate::{common::Solution, util::iter::WithSliding};
 
-#[derive(Debug)]
+#[derive(Clone)]
 struct Fragment {
     id: usize,
     start: usize,
@@ -60,6 +60,36 @@ fn enfragment(mut fs: Vec<Fragment>) -> Result<Vec<Fragment>, Vec<Fragment>> {
     }
 }
 
+fn defragment(mut fs: Vec<Fragment>) -> Vec<Fragment> {
+    for id in (0..fs.len()).rev() {
+        let i = fs
+            .iter()
+            .enumerate()
+            .find(|(_, f)| f.id == id)
+            .map(|(i, _)| i)
+            .unwrap();
+        let len = fs[i].end - fs[i].start;
+        if let Some((ii, start, _)) = fs
+            .iter()
+            .enumerate()
+            .sliding2()
+            .map(|((_, fa), (i, fb))| (i, fa.end, fb.start))
+            .find(|(_, start, end)| *end >= len + start && *start < fs[i].start)
+        {
+            let frag = fs.remove(i);
+            fs.insert(
+                ii,
+                Fragment {
+                    id: frag.id,
+                    start,
+                    end: start + len,
+                },
+            );
+        }
+    }
+    fs
+}
+
 fn solve_a(fs: Vec<Fragment>) -> usize {
     let mut fs = fs;
     let fs_defrag = loop {
@@ -74,6 +104,13 @@ fn solve_a(fs: Vec<Fragment>) -> usize {
     };
 
     fs_defrag
+        .into_iter()
+        .map(|f| (f.start..f.end).sum::<usize>() * f.id)
+        .sum()
+}
+
+fn solve_b(fs: Vec<Fragment>) -> usize {
+    defragment(fs)
         .into_iter()
         .map(|f| (f.start..f.end).sum::<usize>() * f.id)
         .sum()
@@ -101,5 +138,5 @@ pub fn solve(lines: &[String]) -> Solution {
             },
         );
 
-    (solve_a(fs).to_string(), "".to_string())
+    (solve_a(fs.clone()).to_string(), solve_b(fs).to_string())
 }
