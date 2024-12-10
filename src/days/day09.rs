@@ -110,13 +110,13 @@ fn solve_b(files: Vec<Fragment>, gaps: BTreeMap<usize, BTreeSet<usize>>) -> usiz
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let (_, _, _, files, gaps): (_, _, _, Vec<Fragment>, BTreeSet<(usize, usize)>) = lines
+    let (_, _, _, files, gaps): (_, _, _, Vec<Fragment>, BTreeMap<usize, BTreeSet<usize>>) = lines
         .iter()
         .filter(|line| !line.is_empty())
         .flat_map(|line| line.chars())
         .map(|ch| ch.to_digit(10).unwrap() as usize)
         .fold(
-            (0, 0, true, Vec::new(), BTreeSet::new()),
+            (0, 0, true, Vec::new(), BTreeMap::new()),
             |(start, mut next_id, is_file, mut files, mut gaps), len| {
                 if len > 0 {
                     if is_file {
@@ -127,7 +127,7 @@ pub fn solve(lines: &[String]) -> Solution {
                         });
                         next_id += 1;
                     } else {
-                        gaps.insert((start, len));
+                        gaps.entry(len).or_default().insert(start);
                     }
                     (start + len, next_id, !is_file, files, gaps)
                 } else {
@@ -138,14 +138,6 @@ pub fn solve(lines: &[String]) -> Solution {
 
     (
         solve_a(&files).to_string(),
-        solve_b(
-            files,
-            gaps.into_iter()
-                .fold(BTreeMap::new(), |mut gaps, (start, len)| {
-                    gaps.entry(len).or_default().insert(start);
-                    gaps
-                }),
-        )
-        .to_string(),
+        solve_b(files, gaps).to_string(),
     )
 }
