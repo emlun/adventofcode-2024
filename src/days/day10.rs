@@ -1,0 +1,85 @@
+// Solutions to Advent of Code 2024
+// Copyright (C) 2024  Emil Lundberg <emil@emlun.se>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+use std::collections::HashSet;
+
+use crate::common::Solution;
+
+#[derive(Clone, Debug)]
+struct Tile {
+    elevation: u8,
+}
+
+fn find_peaks(map: &mut Vec<Vec<Tile>>, (r, c): (usize, usize)) -> HashSet<(usize, usize)> {
+    if map[r][c].elevation == 9 {
+        [(r, c)].iter().copied().collect()
+    } else {
+        [
+            r.checked_sub(1).map(|rr| (rr, c)),
+            c.checked_sub(1).map(|cc| (r, cc)),
+            Some(r + 1).filter(|rr| *rr < map.len()).map(|rr| (rr, c)),
+            Some(c + 1)
+                .filter(|cc| *cc < map[0].len())
+                .map(|cc| (r, cc)),
+        ]
+        .iter()
+        .flatten()
+        .copied()
+        .flat_map(|(rr, cc)| {
+            if map[rr][cc].elevation == map[r][c].elevation + 1 {
+                find_peaks(map, (rr, cc))
+            } else {
+                HashSet::new()
+            }
+        })
+        .collect()
+    }
+}
+
+fn solve_a(mut map: Vec<Vec<Tile>>, heads: &[(usize, usize)]) -> usize {
+    heads
+        .iter()
+        .map(|pos| find_peaks(&mut map, *pos).len())
+        .sum()
+}
+
+pub fn solve(lines: &[String]) -> Solution {
+    let (map, heads): (Vec<Vec<Tile>>, Vec<(usize, usize)>) = lines
+        .iter()
+        .filter(|line| !line.is_empty())
+        .enumerate()
+        .fold(
+            (Vec::with_capacity(lines.len()), Vec::new()),
+            |(mut rows, mut heads), (r, line)| {
+                let (tiles, row_heads) = line.chars().enumerate().fold(
+                    (Vec::with_capacity(line.len()), Vec::new()),
+                    |(mut tiles, mut heads), (c, ch)| {
+                        let elevation = ch.to_digit(10).unwrap() as u8;
+                        tiles.push(Tile { elevation });
+                        if elevation == 0 {
+                            heads.push((r, c));
+                        }
+                        (tiles, heads)
+                    },
+                );
+                rows.push(tiles);
+                heads.extend(row_heads);
+                (rows, heads)
+            },
+        );
+
+    (solve_a(map.clone(), &heads).to_string(), "".to_string())
+}
