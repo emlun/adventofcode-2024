@@ -24,11 +24,16 @@ struct Tile {
     trails: usize,
 }
 
-fn find_peaks(map: &mut Vec<Vec<Tile>>, (r, c): (usize, usize)) -> HashSet<(usize, usize)> {
+fn find_peaks<'res>(
+    map: &mut Vec<Vec<Tile>>,
+    (r, c): (usize, usize),
+    result: &'res mut HashSet<(usize, usize)>,
+) -> &'res mut HashSet<(usize, usize)> {
     if map[r][c].elevation == 9 {
-        [(r, c)].iter().copied().collect()
+        result.insert((r, c));
+        result
     } else {
-        [
+        for (rr, cc) in [
             r.checked_sub(1).map(|rr| (rr, c)),
             c.checked_sub(1).map(|cc| (r, cc)),
             Some(r + 1).filter(|rr| *rr < map.len()).map(|rr| (rr, c)),
@@ -39,14 +44,12 @@ fn find_peaks(map: &mut Vec<Vec<Tile>>, (r, c): (usize, usize)) -> HashSet<(usiz
         .iter()
         .flatten()
         .copied()
-        .flat_map(|(rr, cc)| {
+        {
             if map[rr][cc].elevation == map[r][c].elevation + 1 {
-                find_peaks(map, (rr, cc))
-            } else {
-                HashSet::new()
+                find_peaks(map, (rr, cc), result);
             }
-        })
-        .collect()
+        }
+        result
     }
 }
 
@@ -85,7 +88,7 @@ fn find_paths(map: &mut Vec<Vec<Tile>>, (r, c): (usize, usize)) -> usize {
 fn solve_a(mut map: Vec<Vec<Tile>>, heads: &[(usize, usize)]) -> usize {
     heads
         .iter()
-        .map(|pos| find_peaks(&mut map, *pos).len())
+        .map(|pos| find_peaks(&mut map, *pos, &mut HashSet::new()).len())
         .sum()
 }
 
