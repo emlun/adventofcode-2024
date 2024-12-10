@@ -18,22 +18,16 @@ use std::collections::HashSet;
 
 use crate::common::Solution;
 
-#[derive(Clone, Debug)]
-struct Tile {
-    elevation: u8,
-    trails: usize,
-}
-
-fn find_peaks<'res>(
-    map: &mut Vec<Vec<Tile>>,
+fn find_paths<'res>(
+    map: &Vec<Vec<u8>>,
     (r, c): (usize, usize),
-    result: &'res mut HashSet<(usize, usize)>,
-) -> &'res mut HashSet<(usize, usize)> {
-    if map[r][c].elevation == 9 {
-        result.insert((r, c));
-        result
+    peaks: &'res mut HashSet<(usize, usize)>,
+) -> (&'res mut HashSet<(usize, usize)>, usize) {
+    if map[r][c] == 9 {
+        peaks.insert((r, c));
+        (peaks, 1)
     } else {
-        for (rr, cc) in [
+        let paths = [
             r.checked_sub(1).map(|rr| (rr, c)),
             c.checked_sub(1).map(|cc| (r, cc)),
             Some(r + 1).filter(|rr| *rr < map.len()).map(|rr| (rr, c)),
@@ -44,60 +38,18 @@ fn find_peaks<'res>(
         .iter()
         .flatten()
         .copied()
-        {
-            if map[rr][cc].elevation == map[r][c].elevation + 1 {
-                find_peaks(map, (rr, cc), result);
-            }
-        }
-        result
-    }
-}
-
-fn find_paths(map: &mut Vec<Vec<Tile>>, (r, c): (usize, usize)) -> usize {
-    if map[r][c].elevation == 9 {
-        1
-    } else {
-        let trails: usize = [
-            r.checked_sub(1).map(|rr| (rr, c)),
-            c.checked_sub(1).map(|cc| (r, cc)),
-            Some(r + 1).filter(|rr| *rr < map.len()).map(|rr| (rr, c)),
-            Some(c + 1)
-                .filter(|cc| *cc < map[0].len())
-                .map(|cc| (r, cc)),
-        ]
-        .iter()
-        .flatten()
-        .copied()
+        .filter(|(rr, cc)| map[*rr][*cc] == map[r][c] + 1)
         .map(|(rr, cc)| {
-            if map[rr][cc].elevation == map[r][c].elevation + 1 {
-                if map[rr][cc].trails > 0 {
-                    map[rr][cc].trails
-                } else {
-                    find_paths(map, (rr, cc))
-                }
-            } else {
-                0
-            }
+            let (_, paths) = find_paths(map, (rr, cc), peaks);
+            paths
         })
         .sum();
-        map[r][c].trails += trails;
-        trails
+        (peaks, paths)
     }
-}
-
-fn solve_a(mut map: Vec<Vec<Tile>>, heads: &[(usize, usize)]) -> usize {
-    heads
-        .iter()
-        .map(|pos| find_peaks(&mut map, *pos, &mut HashSet::new()).len())
-        .sum()
-}
-
-fn solve_b(mut map: Vec<Vec<Tile>>, heads: &[(usize, usize)]) -> usize {
-    heads.iter().map(|pos| find_paths(&mut map, *pos)).sum()
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let (map, heads): (Vec<Vec<Tile>>, Vec<(usize, usize)>) = lines
+    let (map, heads): (Vec<Vec<u8>>, Vec<(usize, usize)>) = lines
         .iter()
         .filter(|line| !line.is_empty())
         .enumerate()
@@ -108,10 +60,7 @@ pub fn solve(lines: &[String]) -> Solution {
                     (Vec::with_capacity(line.len()), Vec::new()),
                     |(mut tiles, mut heads), (c, ch)| {
                         let elevation = ch.to_digit(10).unwrap() as u8;
-                        tiles.push(Tile {
-                            elevation,
-                            trails: 0,
-                        });
+                        tiles.push(elevation);
                         if elevation == 0 {
                             heads.push((r, c));
                         }
@@ -124,8 +73,11 @@ pub fn solve(lines: &[String]) -> Solution {
             },
         );
 
-    (
-        solve_a(map.clone(), &heads).to_string(),
-        solve_b(map.clone(), &heads).to_string(),
-    )
+    let (scores, paths) = heads.iter().fold((0, 0), |(scores, paths), pos| {
+        let mut peaks = HashSet::new();
+        let (peaks, p) = find_paths(&map, *pos, &mut peaks);
+        (scores + peaks.len(), paths + p)
+    });
+
+    (scores.to_string(), paths.to_string())
 }
