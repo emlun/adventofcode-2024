@@ -15,8 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::{
-    cmp::Ordering,
-    collections::{BTreeMap, BTreeSet},
+    cmp::{Ordering, Reverse},
+    collections::{BTreeMap, BinaryHeap},
 };
 
 use crate::common::Solution;
@@ -42,25 +42,25 @@ impl PartialOrd for Fragment {
 
 fn defragment(
     mut files: Vec<Fragment>,
-    mut gaps: BTreeMap<usize, BTreeSet<usize>>,
+    mut gaps: BTreeMap<usize, BinaryHeap<Reverse<usize>>>,
 ) -> Vec<Fragment> {
     for file in files.iter_mut().rev() {
         if let Some((len, start)) = gaps
             .range(file.len..)
             .flat_map(|(len, starts)| {
                 starts
-                    .range(..file.start)
-                    .next()
-                    .map(move |start| (*len, *start))
+                    .peek()
+                    .filter(|Reverse(start)| *start < file.start)
+                    .map(move |Reverse(start)| (*len, *start))
             })
             .min_by_key(|(_, start)| *start)
         {
-            gaps.get_mut(&len).unwrap().remove(&start);
+            gaps.get_mut(&len).unwrap().pop();
             file.start = start;
             if len > file.len {
                 gaps.entry(len - file.len)
                     .or_default()
-                    .insert(start + file.len);
+                    .push(Reverse(start + file.len));
             }
         }
     }
@@ -102,7 +102,7 @@ fn solve_a(files: &[Fragment]) -> usize {
     checksum
 }
 
-fn solve_b(files: Vec<Fragment>, gaps: BTreeMap<usize, BTreeSet<usize>>) -> usize {
+fn solve_b(files: Vec<Fragment>, gaps: BTreeMap<usize, BinaryHeap<Reverse<usize>>>) -> usize {
     defragment(files, gaps)
         .into_iter()
         .map(|f| (f.start..(f.start + f.len)).sum::<usize>() * f.id)
@@ -110,7 +110,13 @@ fn solve_b(files: Vec<Fragment>, gaps: BTreeMap<usize, BTreeSet<usize>>) -> usiz
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let (_, _, _, files, gaps): (_, _, _, Vec<Fragment>, BTreeMap<usize, BTreeSet<usize>>) = lines
+    let (_, _, _, files, gaps): (
+        _,
+        _,
+        _,
+        Vec<Fragment>,
+        BTreeMap<usize, BinaryHeap<Reverse<usize>>>,
+    ) = lines
         .iter()
         .filter(|line| !line.is_empty())
         .flat_map(|line| line.chars())
@@ -127,7 +133,7 @@ pub fn solve(lines: &[String]) -> Solution {
                         });
                         next_id += 1;
                     } else {
-                        gaps.entry(len).or_default().insert(start);
+                        gaps.entry(len).or_default().push(Reverse(start));
                     }
                     (start + len, next_id, !is_file, files, gaps)
                 } else {
