@@ -16,7 +16,7 @@
 
 use std::{
     cmp::{Ordering, Reverse},
-    collections::{BTreeMap, BinaryHeap},
+    collections::BinaryHeap,
 };
 
 use crate::common::Solution;
@@ -42,25 +42,25 @@ impl PartialOrd for Fragment {
 
 fn defragment(
     mut files: Vec<Fragment>,
-    mut gaps: BTreeMap<usize, BinaryHeap<Reverse<usize>>>,
+    mut gaps: [BinaryHeap<Reverse<usize>>; 10],
 ) -> Vec<Fragment> {
     for file in files.iter_mut().rev() {
         if let Some((len, start)) = gaps
-            .range(file.len..)
+            .iter()
+            .enumerate()
+            .skip(file.len)
             .flat_map(|(len, starts)| {
                 starts
                     .peek()
                     .filter(|Reverse(start)| *start < file.start)
-                    .map(move |Reverse(start)| (*len, *start))
+                    .map(move |Reverse(start)| (len, *start))
             })
             .min_by_key(|(_, start)| *start)
         {
-            gaps.get_mut(&len).unwrap().pop();
+            gaps[len].pop();
             file.start = start;
             if len > file.len {
-                gaps.entry(len - file.len)
-                    .or_default()
-                    .push(Reverse(start + file.len));
+                gaps[len - file.len].push(Reverse(start + file.len));
             }
         }
     }
@@ -102,7 +102,7 @@ fn solve_a(files: &[Fragment]) -> usize {
     checksum
 }
 
-fn solve_b(files: Vec<Fragment>, gaps: BTreeMap<usize, BinaryHeap<Reverse<usize>>>) -> usize {
+fn solve_b(files: Vec<Fragment>, gaps: [BinaryHeap<Reverse<usize>>; 10]) -> usize {
     defragment(files, gaps)
         .into_iter()
         .map(|f| (f.start..(f.start + f.len)).sum::<usize>() * f.id)
@@ -110,19 +110,13 @@ fn solve_b(files: Vec<Fragment>, gaps: BTreeMap<usize, BinaryHeap<Reverse<usize>
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let (_, _, _, files, gaps): (
-        _,
-        _,
-        _,
-        Vec<Fragment>,
-        BTreeMap<usize, BinaryHeap<Reverse<usize>>>,
-    ) = lines
+    let (_, _, _, files, gaps): (_, _, _, Vec<Fragment>, [BinaryHeap<Reverse<usize>>; 10]) = lines
         .iter()
         .filter(|line| !line.is_empty())
         .flat_map(|line| line.chars())
         .map(|ch| ch.to_digit(10).unwrap() as usize)
         .fold(
-            (0, 0, true, Vec::new(), BTreeMap::new()),
+            (0, 0, true, Vec::new(), [const { BinaryHeap::new() }; 10]),
             |(start, mut next_id, is_file, mut files, mut gaps), len| {
                 if len > 0 {
                     if is_file {
@@ -133,7 +127,7 @@ pub fn solve(lines: &[String]) -> Solution {
                         });
                         next_id += 1;
                     } else {
-                        gaps.entry(len).or_default().push(Reverse(start));
+                        gaps[len].push(Reverse(start));
                     }
                     (start + len, next_id, !is_file, files, gaps)
                 } else {
