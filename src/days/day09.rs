@@ -40,48 +40,6 @@ impl PartialOrd for Fragment {
     }
 }
 
-fn enfragment(
-    mut files: BTreeSet<Fragment>,
-    mut gaps: BTreeSet<(usize, usize)>,
-) -> Result<
-    (BTreeSet<Fragment>, BTreeSet<(usize, usize)>),
-    (BTreeSet<Fragment>, BTreeSet<(usize, usize)>),
-> {
-    if let Some(frag) = files.pop_last() {
-        if let Some((gap_start, gap_len)) = gaps.pop_first() {
-            let len = std::cmp::min(frag.len, gap_len);
-            files.insert(Fragment {
-                id: frag.id,
-                start: gap_start,
-                len,
-            });
-
-            if frag.len > len {
-                files.insert(Fragment {
-                    id: frag.id,
-                    start: frag.start,
-                    len: frag.len - len,
-                });
-            }
-
-            if gap_len > len {
-                gaps.insert((gap_start + len, gap_len - len));
-            }
-            Ok((files, gaps))
-        } else {
-            let start = files.last().map(|file| file.start + file.len).unwrap();
-            files.insert(Fragment {
-                id: frag.id,
-                start,
-                len: frag.len,
-            });
-            Err((files, gaps))
-        }
-    } else {
-        Err((files, gaps))
-    }
-}
-
 fn defragment(
     mut files: Vec<Fragment>,
     mut gaps: BTreeMap<usize, BTreeSet<usize>>,
@@ -109,18 +67,39 @@ fn defragment(
     files
 }
 
-fn solve_a(mut files: BTreeSet<Fragment>, mut gaps: BTreeSet<(usize, usize)>) -> usize {
-    loop {
-        (files, gaps) = match enfragment(files, gaps) {
-            Ok(fs2) => fs2,
-            Err((files, _)) => {
-                break files;
+fn solve_a(files: &[Fragment]) -> usize {
+    let mut checksum = 0;
+    let mut front_i = 0;
+    let mut back_i = files.len() - 1;
+    let mut file_len = files[back_i].len;
+    while front_i < back_i {
+        checksum += (files[front_i].start..(files[front_i].start + files[front_i].len))
+            .sum::<usize>()
+            * front_i;
+
+        let mut gap_start = files[front_i].start + files[front_i].len;
+        let gap_end = files[front_i + 1].start;
+        let mut gap_len = gap_end - gap_start;
+
+        while gap_len > 0 && front_i < back_i {
+            let move_len = std::cmp::min(gap_len, file_len);
+            checksum += (gap_start..gap_start + move_len).sum::<usize>() * back_i;
+
+            gap_start += move_len;
+            gap_len -= move_len;
+            file_len -= move_len;
+            if file_len == 0 {
+                back_i -= 1;
+                if back_i == front_i {
+                    return checksum;
+                }
+                file_len = files[back_i].len;
             }
-        };
+        }
+        front_i += 1;
     }
-    .into_iter()
-    .map(|f| (f.start..(f.start + f.len)).sum::<usize>() * f.id)
-    .sum()
+    checksum += (files[back_i].start..files[back_i].start + file_len).sum::<usize>() * back_i;
+    checksum
 }
 
 fn solve_b(files: Vec<Fragment>, gaps: BTreeMap<usize, BTreeSet<usize>>) -> usize {
@@ -158,7 +137,7 @@ pub fn solve(lines: &[String]) -> Solution {
         );
 
     (
-        solve_a(files.iter().cloned().collect(), gaps.clone()).to_string(),
+        solve_a(&files).to_string(),
         solve_b(
             files,
             gaps.into_iter()
