@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::common::Solution;
 
@@ -32,20 +32,22 @@ struct Map {
 
 impl Map {
     fn new(map: &[Vec<bool>]) -> Self {
+        let obstacles_r = map
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .enumerate()
+                    .filter(|(_, cell)| **cell)
+                    .map(|(c, _)| c)
+                    .collect()
+            })
+            .collect();
+        let obstacles_c = (0..map[0].len())
+            .map(|c| (0..map.len()).filter(|r| map[*r][c]).collect())
+            .collect();
         Self {
-            obstacles_r: map
-                .iter()
-                .map(|row| {
-                    row.iter()
-                        .enumerate()
-                        .filter(|(_, cell)| **cell)
-                        .map(|(c, _)| c)
-                        .collect()
-                })
-                .collect(),
-            obstacles_c: (0..map[0].len())
-                .map(|c| (0..map.len()).filter(|r| map[*r][c]).collect())
-                .collect(),
+            obstacles_r,
+            obstacles_c,
         }
     }
 
@@ -66,26 +68,26 @@ impl Map {
         }
     }
 
-    fn seek(&self, pos: &Pos) -> Option<Pos> {
+    fn seek(obstacles_r: &[Vec<usize>], obstacles_c: &[Vec<usize>], pos: &Pos) -> Option<Pos> {
         let (rr, cc) = match pos.dir {
             0 => {
-                let ri = self.obstacles_c[pos.c].partition_point(|rr| *rr < pos.r);
-                let rr = self.obstacles_c[pos.c].get(ri.checked_sub(1)?)? + 1;
+                let ri = obstacles_c[pos.c].partition_point(|rr| *rr < pos.r);
+                let rr = obstacles_c[pos.c].get(ri.checked_sub(1)?)? + 1;
                 Some((rr, pos.c)).filter(|(rr, _)| *rr <= pos.r)
             }
             1 => {
-                let ci = self.obstacles_r[pos.r].partition_point(|cc| *cc <= pos.c);
-                let cc = self.obstacles_r[pos.r].get(ci)? - 1;
+                let ci = obstacles_r[pos.r].partition_point(|cc| *cc <= pos.c);
+                let cc = obstacles_r[pos.r].get(ci)? - 1;
                 Some((pos.r, cc)).filter(|(_, cc)| *cc >= pos.c)
             }
             2 => {
-                let ri = self.obstacles_c[pos.c].partition_point(|rr| *rr <= pos.r);
-                let rr = self.obstacles_c[pos.c].get(ri)? - 1;
+                let ri = obstacles_c[pos.c].partition_point(|rr| *rr <= pos.r);
+                let rr = obstacles_c[pos.c].get(ri)? - 1;
                 Some((rr, pos.c)).filter(|(rr, _)| *rr >= pos.r)
             }
             3 => {
-                let ci = self.obstacles_r[pos.r].partition_point(|cc| *cc < pos.c);
-                let cc = self.obstacles_r[pos.r].get(ci.checked_sub(1)?)? + 1;
+                let ci = obstacles_r[pos.r].partition_point(|cc| *cc < pos.c);
+                let cc = obstacles_r[pos.r].get(ci.checked_sub(1)?)? + 1;
                 Some((pos.r, cc)).filter(|(_, cc)| *cc <= pos.c)
             }
             _ => unreachable!(),
@@ -147,7 +149,7 @@ fn trace_path(map: &[Vec<bool>], start: Pos) -> (Vec<Pos>, bool) {
 fn is_loop(map: &Map, start: Pos) -> bool {
     let mut visited = HashSet::new();
     let mut pos = start;
-    while let Some(new_pos) = map.seek(&pos) {
+    while let Some(new_pos) = Map::seek(&map.obstacles_r, &map.obstacles_c, &pos) {
         if visited.contains(&new_pos) {
             return true;
         } else {
