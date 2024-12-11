@@ -53,7 +53,7 @@ pub fn solve(lines: &[String]) -> Solution {
         .iter()
         .filter(|line| !line.is_empty())
         .flat_map(|line| line.split_whitespace())
-        .map(|ch| ch.parse().unwrap())
+        .map(|s| s.parse().unwrap())
         .counts();
 
     let stones = simulate(stones, 25);
