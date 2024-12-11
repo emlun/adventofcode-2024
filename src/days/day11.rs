@@ -32,7 +32,7 @@ fn step(stone: u64) -> (u64, Option<u64>) {
     }
 }
 
-fn simulate(mut stones: HashMap<u64, usize>, steps: usize) -> usize {
+fn simulate(mut stones: HashMap<u64, usize>, steps: usize) -> HashMap<u64, usize> {
     for _ in 0..steps {
         stones = stones
             .into_iter()
@@ -45,7 +45,7 @@ fn simulate(mut stones: HashMap<u64, usize>, steps: usize) -> usize {
                 new_stones
             });
     }
-    stones.values().sum()
+    stones
 }
 
 pub fn solve(lines: &[String]) -> Solution {
@@ -56,8 +56,9 @@ pub fn solve(lines: &[String]) -> Solution {
         .map(|ch| ch.parse().unwrap())
         .counts();
 
-    (
-        simulate(stones.clone(), 25).to_string(),
-        simulate(stones, 75).to_string(),
-    )
+    let stones = simulate(stones, 25);
+    let solution_a: usize = stones.values().sum();
+
+    let solution_b: usize = simulate(stones, 50).values().sum();
+    (solution_a.to_string(), solution_b.to_string())
 }
