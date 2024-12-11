@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::common::Solution;
+use std::collections::HashMap;
+
+use crate::{common::Solution, util::iter::Countable};
 
 fn step(stone: u64) -> (u64, Option<u64>) {
     if stone == 0 {
@@ -30,30 +32,32 @@ fn step(stone: u64) -> (u64, Option<u64>) {
     }
 }
 
-fn solve_a(mut stones: Vec<u64>) -> usize {
-    for _ in 0..25 {
-        for i in 0..stones.len() {
-            match step(stones[i]) {
-                (s, None) => {
-                    stones[i] = s;
+fn simulate(mut stones: HashMap<u64, usize>, steps: usize) -> usize {
+    for _ in 0..steps {
+        stones = stones
+            .into_iter()
+            .fold(HashMap::new(), |mut new_stones, (value, count)| {
+                let (s, t) = step(value);
+                *new_stones.entry(s).or_insert(0) += count;
+                if let Some(t) = t {
+                    *new_stones.entry(t).or_insert(0) += count;
                 }
-                (s, Some(t)) => {
-                    stones[i] = s;
-                    stones.push(t);
-                }
-            }
-        }
+                new_stones
+            });
     }
-    stones.len()
+    stones.values().sum()
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let stones = lines
+    let stones: HashMap<u64, usize> = lines
         .iter()
         .filter(|line| !line.is_empty())
         .flat_map(|line| line.split_whitespace())
         .map(|ch| ch.parse().unwrap())
-        .collect();
+        .counts();
 
-    (solve_a(stones).to_string(), "".to_string())
+    (
+        simulate(stones.clone(), 25).to_string(),
+        simulate(stones, 75).to_string(),
+    )
 }
