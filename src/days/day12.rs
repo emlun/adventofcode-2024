@@ -160,16 +160,11 @@ fn solve_b(chart: &Map) -> usize {
                 * tiles
                     .iter()
                     .copied()
-                    .map(|(r, c)| {
-                        let tile = &chart.rows[r][c];
-                        match tile.neighbors {
-                            0 => 4,
-                            1..=3 => {
-                                chart.is_convex_corner(r, c) + chart.is_after_concave_corner(r, c)
-                            }
-                            4 => 0,
-                            _ => unreachable!(),
-                        }
+                    .map(|(r, c)| match chart.rows[r][c].neighbors {
+                        0 => 4,
+                        1..=3 => chart.is_convex_corner(r, c) + chart.is_after_concave_corner(r, c),
+                        4 => 0,
+                        _ => unreachable!(),
                     })
                     .sum::<usize>()
         })
