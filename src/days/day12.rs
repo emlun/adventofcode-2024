@@ -84,18 +84,7 @@ impl Map {
     }
 }
 
-fn chart(map: &[Vec<char>]) -> Map {
-    let mut rows: Vec<Vec<Tile>> = map
-        .iter()
-        .map(|row| {
-            row.iter()
-                .map(|plant| Tile {
-                    plant: *plant,
-                    neighbors: 0,
-                })
-                .collect()
-        })
-        .collect();
+fn chart(mut rows: Vec<Vec<Tile>>) -> Map {
     let mut regions = Vec::new();
     let h = rows.len();
     let w = rows[0].len();
@@ -188,13 +177,20 @@ fn solve_b(chart: &Map) -> usize {
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let map: Vec<Vec<char>> = lines
+    let map = lines
         .iter()
         .filter(|line| !line.is_empty())
-        .map(|line| line.chars().collect())
+        .map(|line| {
+            line.chars()
+                .map(|plant| Tile {
+                    plant,
+                    neighbors: 0,
+                })
+                .collect()
+        })
         .collect();
 
-    let chart = chart(&map);
+    let chart = chart(map);
 
     (solve_a(&chart).to_string(), solve_b(&chart).to_string())
 }
