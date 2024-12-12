@@ -29,6 +29,61 @@ struct Map {
     regions: Vec<HashSet<(usize, usize)>>,
 }
 
+impl Map {
+    fn displace(&self, r: usize, c: usize, dr: isize, dc: isize) -> Option<(usize, usize)> {
+        r.checked_add_signed(dr)
+            .zip(c.checked_add_signed(dc))
+            .filter(|(rr, cc)| {
+                (0..self.rows.len()).contains(rr) && (0..self.rows[0].len()).contains(cc)
+            })
+    }
+
+    fn get_drc(&self, r: usize, c: usize, dr: isize, dc: isize) -> Option<&Tile> {
+        self.displace(r, c, dr, dc)
+            .and_then(|(rr, cc)| self.rows.get(rr)?.get(cc))
+    }
+
+    fn is_convex_corner(&self, r: usize, c: usize) -> usize {
+        let tile = &self.rows[r][c];
+        [
+            [(0, -1), (-1, -1), (-1, 0)],
+            [(-1, 0), (-1, 1), (0, 1)],
+            [(0, 1), (1, 1), (1, 0)],
+            [(1, 0), (1, -1), (0, -1)],
+        ]
+        .into_iter()
+        .filter(|drcs| {
+            drcs.iter().all(|(dr, dc)| {
+                self.get_drc(r, c, *dr, *dc)
+                    .map(|t| t.plant != tile.plant)
+                    .unwrap_or(true)
+            })
+        })
+        .count()
+    }
+
+    fn is_after_concave_corner(&self, r: usize, c: usize) -> usize {
+        let tile = &self.rows[r][c];
+        [
+            ((-1, -1), (-1, 0)),
+            ((-1, 1), (0, 1)),
+            ((1, 1), (1, 0)),
+            ((1, -1), (0, -1)),
+        ]
+        .into_iter()
+        .filter(|((dra, dca), (drb, dcb))| {
+            self.get_drc(r, c, *dra, *dca)
+                .map(|t| t.plant == tile.plant)
+                .unwrap_or(false)
+                && self
+                    .get_drc(r, c, *drb, *dcb)
+                    .map(|t| t.plant != tile.plant)
+                    .unwrap_or(false)
+        })
+        .count()
+    }
+}
+
 fn chart(map: &[Vec<char>]) -> Map {
     let mut rows: Vec<Vec<Tile>> = map
         .iter()
@@ -107,6 +162,31 @@ fn solve_a(chart: &Map) -> usize {
         .sum()
 }
 
+fn solve_b(chart: &Map) -> usize {
+    chart
+        .regions
+        .iter()
+        .map(|tiles| {
+            tiles.len()
+                * tiles
+                    .iter()
+                    .copied()
+                    .map(|(r, c)| {
+                        let tile = &chart.rows[r][c];
+                        match tile.neighbors {
+                            0 => 4,
+                            1..=3 => {
+                                chart.is_convex_corner(r, c) + chart.is_after_concave_corner(r, c)
+                            }
+                            4 => 0,
+                            _ => unreachable!(),
+                        }
+                    })
+                    .sum::<usize>()
+        })
+        .sum()
+}
+
 pub fn solve(lines: &[String]) -> Solution {
     let map: Vec<Vec<char>> = lines
         .iter()
@@ -116,5 +196,5 @@ pub fn solve(lines: &[String]) -> Solution {
 
     let chart = chart(&map);
 
-    (solve_a(&chart).to_string(), "".to_string())
+    (solve_a(&chart).to_string(), solve_b(&chart).to_string())
 }
