@@ -136,33 +136,31 @@ fn chart(mut rows: Vec<Vec<Tile>>) -> Map {
     Map { rows, regions }
 }
 
-fn solve_a(chart: &Map) -> usize {
-    chart
-        .regions
+fn solve_a(map: &Map) -> usize {
+    map.regions
         .iter()
         .map(|tiles| {
             tiles.len()
                 * (4 * tiles.len()
                     - tiles
                         .iter()
-                        .map(|(r, c)| chart.rows[*r][*c].neighbors)
+                        .map(|(r, c)| map.rows[*r][*c].neighbors)
                         .sum::<usize>())
         })
         .sum()
 }
 
-fn solve_b(chart: &Map) -> usize {
-    chart
-        .regions
+fn solve_b(map: &Map) -> usize {
+    map.regions
         .iter()
         .map(|tiles| {
             tiles.len()
                 * tiles
                     .iter()
                     .copied()
-                    .map(|(r, c)| match chart.rows[r][c].neighbors {
+                    .map(|(r, c)| match map.rows[r][c].neighbors {
                         0 => 4,
-                        1..=3 => chart.is_convex_corner(r, c) + chart.is_after_concave_corner(r, c),
+                        1..=3 => map.is_convex_corner(r, c) + map.is_after_concave_corner(r, c),
                         4 => 0,
                         _ => unreachable!(),
                     })
@@ -172,20 +170,20 @@ fn solve_b(chart: &Map) -> usize {
 }
 
 pub fn solve(lines: &[String]) -> Solution {
-    let map = lines
-        .iter()
-        .filter(|line| !line.is_empty())
-        .map(|line| {
-            line.chars()
-                .map(|plant| Tile {
-                    plant,
-                    neighbors: 0,
-                })
-                .collect()
-        })
-        .collect();
+    let map = chart(
+        lines
+            .iter()
+            .filter(|line| !line.is_empty())
+            .map(|line| {
+                line.chars()
+                    .map(|plant| Tile {
+                        plant,
+                        neighbors: 0,
+                    })
+                    .collect()
+            })
+            .collect(),
+    );
 
-    let chart = chart(map);
-
-    (solve_a(&chart).to_string(), solve_b(&chart).to_string())
+    (solve_a(&map).to_string(), solve_b(&map).to_string())
 }
