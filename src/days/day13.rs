@@ -48,7 +48,7 @@ fn solve_a(games: &[Game]) -> i64 {
                 }
 
                 let b = (xa * yp - xp * ya) / (xa * yb - xb * ya);
-                let a = (xp - xb * (xa * yp - xp * ya) / (xa * yb - xb * ya)) / xa;
+                let a = (xp - xb * b) / xa;
                 if (xa * a + xb * b == *xp) && (ya * a + yb * b == *yp) {
                     3 * a + b
                 } else {
