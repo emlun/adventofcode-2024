@@ -16,6 +16,9 @@
 
 use crate::common::Solution;
 
+#[cfg(debug_assertions)]
+use crate::util::gcd;
+
 struct Game {
     a: (i64, i64),
     b: (i64, i64),
@@ -31,16 +34,25 @@ fn solve_a(games: &[Game]) -> i64 {
                  b: (xb, yb),
                  prize: (xp, yp),
              }| {
+                #[cfg(debug_assertions)]
                 if xa * yb == xb * ya {
-                    0
+                    let ga = gcd(*xa as usize, *ya as usize) as i64;
+                    let gb = gcd(*xb as usize, *yb as usize) as i64;
+                    let gp = gcd(*xp as usize, *yp as usize) as i64;
+                    let na = (xa / ga, ya / ga);
+                    let nb = (xb / gb, yb / gb);
+                    let np = (xp / gp, yp / gp);
+                    debug_assert_eq!(na, nb, "System matrix columns are not colinear");
+                    debug_assert_eq!(na, np, "RHS is colinear with system matrix");
+                    return 0;
+                }
+
+                let b = (xa * yp - xp * ya) / (xa * yb - xb * ya);
+                let a = (xp - xb * (xa * yp - xp * ya) / (xa * yb - xb * ya)) / xa;
+                if (xa * a + xb * b == *xp) && (ya * a + yb * b == *yp) {
+                    3 * a + b
                 } else {
-                    let b = (xa * yp - xp * ya) / (xa * yb - xb * ya);
-                    let a = (xp - xb * (xa * yp - xp * ya) / (xa * yb - xb * ya)) / xa;
-                    if (xa * a + xb * b == *xp) && (ya * a + yb * b == *yp) {
-                        3 * a + b
-                    } else {
-                        0
-                    }
+                    0
                 }
             },
         )
