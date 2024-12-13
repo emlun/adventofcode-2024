@@ -86,5 +86,17 @@ pub fn solve(lines: &[String]) -> Solution {
         },
     );
 
-    (solve_a(&games).to_string(), "".to_string())
+    (
+        solve_a(&games).to_string(),
+        solve_a(
+            &games
+                .into_iter()
+                .map(|game| Game {
+                    prize: (game.prize.0 + 10000000000000, game.prize.1 + 10000000000000),
+                    ..game
+                })
+                .collect::<Vec<_>>(),
+        )
+        .to_string(),
+    )
 }
