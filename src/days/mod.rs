@@ -27,6 +27,7 @@ pub mod day10;
 pub mod day11;
 pub mod day12;
 pub mod day13;
+pub mod day14;
 
 macro_rules! days {
     ($($day_mod:ident),*) => {
@@ -43,4 +44,7 @@ pub fn all_numbers() -> Vec<u8> {
     (1..=25).filter(|&day| get_solver(day).is_some()).collect()
 }
 
-days!(day01, day02, day03, day04, day05, day06, day07, day08, day09, day10, day11, day12, day13);
+days!(
+    day01, day02, day03, day04, day05, day06, day07, day08, day09, day10, day11, day12, day13,
+    day14
+);
