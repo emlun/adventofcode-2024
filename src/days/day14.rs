@@ -25,8 +25,6 @@ struct Robot {
 
 const W: i64 = 101;
 const H: i64 = 103;
-const PICTURE_W: u64 = 31;
-const PICTURE_H: u64 = 33;
 
 fn solve_a(robots: &[Robot], steps: i64) -> i64 {
     let (q1, q2, q3, q4) = robots.iter().fold(
@@ -50,7 +48,24 @@ fn solve_a(robots: &[Robot], steps: i64) -> i64 {
     q1 * q2 * q3 * q4
 }
 
+fn dispersion(nums: &[i64]) -> u64 {
+    let mean = nums.iter().copied().sum::<i64>() / nums.len() as i64;
+    nums.iter().copied().map(|a| a.abs_diff(mean)).sum()
+}
+
 fn solve_b(robots: &[Robot]) -> i64 {
+    let mut last_dispersion_x = dispersion(
+        &robots
+            .iter()
+            .map(|Robot { p: (x, _), .. }| *x)
+            .collect::<Vec<_>>(),
+    );
+    let mut last_dispersion_y = dispersion(
+        &robots
+            .iter()
+            .map(|Robot { p: (_, y), .. }| *y)
+            .collect::<Vec<_>>(),
+    );
     for step in 1..100_000 {
         let (xs, ys): (Vec<i64>, Vec<i64>) = robots.iter().fold(
             (
@@ -70,31 +85,11 @@ fn solve_b(robots: &[Robot]) -> i64 {
             },
         );
 
-        #[cfg(not(debug_assertions))]
-        let mut xs = xs;
-        #[cfg(not(debug_assertions))]
-        let mut ys = ys;
+        let dispersion_x = dispersion(&xs);
+        let dispersion_y = dispersion(&ys);
 
-        let (median_x, median_y) = {
-            #[cfg(debug_assertions)]
-            let mut xs = xs.clone();
-            #[cfg(debug_assertions)]
-            let mut ys = ys.clone();
-
-            xs.sort();
-            ys.sort();
-            (xs[xs.len() / 2], ys[ys.len() / 2])
-        };
-
-        if xs
-            .iter()
-            .zip(ys.iter())
-            .filter(|(x, y)| {
-                x.abs_diff(median_x) <= PICTURE_W / 2 + 1
-                    && y.abs_diff(median_y) <= PICTURE_H / 2 + 1
-            })
-            .count()
-            >= robots.len() * 70 / 100
+        if dispersion_x * 100 < 75 * last_dispersion_x
+            && dispersion_y * 100 < 75 * last_dispersion_y
         {
             #[cfg(debug_assertions)]
             {
@@ -118,6 +113,8 @@ fn solve_b(robots: &[Robot]) -> i64 {
             }
             return step;
         }
+        last_dispersion_x = dispersion_x;
+        last_dispersion_y = dispersion_y;
     }
     unreachable!()
 }
