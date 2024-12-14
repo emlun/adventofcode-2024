@@ -23,9 +23,10 @@ struct Robot {
     v: (i64, i64),
 }
 
+const W: i64 = 101;
+const H: i64 = 103;
+
 fn solve_a(robots: &[Robot], steps: i64) -> i64 {
-    const W: i64 = 101;
-    const H: i64 = 103;
     let (q1, q2, q3, q4) = robots.iter().fold(
         (0, 0, 0, 0),
         |(q1, q2, q3, q4),
@@ -47,6 +48,53 @@ fn solve_a(robots: &[Robot], steps: i64) -> i64 {
     q1 * q2 * q3 * q4
 }
 
+fn solve_b(robots: &[Robot]) -> i64 {
+    for step in 1.. {
+        if step % 1_000_000 == 0 {
+            dbg!(step);
+        }
+        let poss: Vec<(i64, i64)> = robots
+            .iter()
+            .map(
+                |Robot {
+                     p: (px, py),
+                     v: (vx, vy),
+                 }| {
+                    let x = (px + vx * step).rem_euclid(W);
+                    let y = (py + vy * step).rem_euclid(H);
+                    (x, y)
+                },
+            )
+            .collect();
+
+        if poss
+            .iter()
+            .filter(|(x, y)| *x >= W * 3 / 7 - y && *x <= W * 4 / 7 + y)
+            .count()
+            >= robots.len() * 95 / 100
+        {
+            let mut grid: Vec<Vec<u8>> = vec![vec![0; W as usize]; H as usize];
+            for (x, y) in poss {
+                grid[y as usize][x as usize] += 1;
+            }
+            println!("Step {}:", step);
+            for row in grid {
+                println!(
+                    "{}",
+                    row.into_iter()
+                        .map(|count| if count > 0 {
+                            count.to_string()
+                        } else {
+                            ' '.to_string()
+                        })
+                        .collect::<String>()
+                );
+            }
+        }
+    }
+    todo!()
+}
+
 pub fn solve(lines: &[String]) -> Solution {
     let robots = lines
         .iter()
@@ -62,5 +110,8 @@ pub fn solve(lines: &[String]) -> Solution {
         })
         .collect::<Vec<_>>();
 
-    (solve_a(&robots, 100).to_string(), "".to_string())
+    (
+        solve_a(&robots, 100).to_string(),
+        solve_b(&robots).to_string(),
+    )
 }
