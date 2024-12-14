@@ -25,6 +25,8 @@ struct Robot {
 
 const W: i64 = 101;
 const H: i64 = 103;
+const PICTURE_W: u64 = 31;
+const PICTURE_H: u64 = 33;
 
 fn solve_a(robots: &[Robot], steps: i64) -> i64 {
     let (q1, q2, q3, q4) = robots.iter().fold(
@@ -49,50 +51,75 @@ fn solve_a(robots: &[Robot], steps: i64) -> i64 {
 }
 
 fn solve_b(robots: &[Robot]) -> i64 {
-    for step in 1.. {
-        if step % 1_000_000 == 0 {
-            dbg!(step);
-        }
-        let poss: Vec<(i64, i64)> = robots
-            .iter()
-            .map(
-                |Robot {
-                     p: (px, py),
-                     v: (vx, vy),
-                 }| {
-                    let x = (px + vx * step).rem_euclid(W);
-                    let y = (py + vy * step).rem_euclid(H);
-                    (x, y)
-                },
-            )
-            .collect();
+    for step in 1..100_000 {
+        let (xs, ys): (Vec<i64>, Vec<i64>) = robots.iter().fold(
+            (
+                Vec::with_capacity(robots.len()),
+                Vec::with_capacity(robots.len()),
+            ),
+            |(mut xs, mut ys),
+             Robot {
+                 p: (px, py),
+                 v: (vx, vy),
+             }| {
+                let x = (px + vx * step).rem_euclid(W);
+                let y = (py + vy * step).rem_euclid(H);
+                xs.push(x);
+                ys.push(y);
+                (xs, ys)
+            },
+        );
 
-        if poss
+        #[cfg(not(debug_assertions))]
+        let mut xs = xs;
+        #[cfg(not(debug_assertions))]
+        let mut ys = ys;
+
+        let (median_x, median_y) = {
+            #[cfg(debug_assertions)]
+            let mut xs = xs.clone();
+            #[cfg(debug_assertions)]
+            let mut ys = ys.clone();
+
+            xs.sort();
+            ys.sort();
+            (xs[xs.len() / 2], ys[ys.len() / 2])
+        };
+
+        if xs
             .iter()
-            .filter(|(x, y)| *x >= W * 3 / 7 - y && *x <= W * 4 / 7 + y)
+            .zip(ys.iter())
+            .filter(|(x, y)| {
+                x.abs_diff(median_x) <= PICTURE_W / 2 + 1
+                    && y.abs_diff(median_y) <= PICTURE_H / 2 + 1
+            })
             .count()
-            >= robots.len() * 95 / 100
+            >= robots.len() * 70 / 100
         {
-            let mut grid: Vec<Vec<u8>> = vec![vec![0; W as usize]; H as usize];
-            for (x, y) in poss {
-                grid[y as usize][x as usize] += 1;
+            #[cfg(debug_assertions)]
+            {
+                let mut grid: Vec<Vec<u8>> = vec![vec![0; W as usize]; H as usize];
+                for (x, y) in xs.iter().zip(ys.iter()) {
+                    grid[*y as usize][*x as usize] += 1;
+                }
+                println!("Step {}:", step);
+                for row in grid {
+                    println!(
+                        "{}",
+                        row.into_iter()
+                            .map(|count| if count > 0 {
+                                count.to_string()
+                            } else {
+                                ' '.to_string()
+                            })
+                            .collect::<String>()
+                    );
+                }
             }
-            println!("Step {}:", step);
-            for row in grid {
-                println!(
-                    "{}",
-                    row.into_iter()
-                        .map(|count| if count > 0 {
-                            count.to_string()
-                        } else {
-                            ' '.to_string()
-                        })
-                        .collect::<String>()
-                );
-            }
+            return step;
         }
     }
-    todo!()
+    unreachable!()
 }
 
 pub fn solve(lines: &[String]) -> Solution {
