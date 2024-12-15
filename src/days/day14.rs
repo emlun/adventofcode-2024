@@ -91,7 +91,7 @@ fn solve_b(robots: &[Robot]) -> i64 {
         if dispersion_x * 100 < 75 * last_dispersion_x
             && dispersion_y * 100 < 75 * last_dispersion_y
         {
-            #[cfg(debug_assertions)]
+            #[cfg(feature = "print")]
             {
                 let mut grid: Vec<Vec<u8>> = vec![vec![0; W as usize]; H as usize];
                 for (x, y) in xs.iter().zip(ys.iter()) {

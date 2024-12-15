@@ -18,7 +18,7 @@ use std::collections::HashSet;
 
 use crate::common::Solution;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "print")]
 fn print_state<const WIDE: bool>(
     walls: &[Vec<bool>],
     boxes: &HashSet<(usize, usize)>,
@@ -87,7 +87,7 @@ fn solve_a(
 ) -> usize {
     let (mut r, mut c) = start;
     for dir in moves {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "print")]
         print_state::<false>(walls, &boxes, (r, c), *dir);
         let (dr, dc): (isize, isize) = match dir {
             0 => (-1, 0),
@@ -190,7 +190,7 @@ fn solve_b(
         .collect();
 
     for dir in moves {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "print")]
         print_state::<true>(&walls, &boxes, (r, c), *dir);
 
         let (dr, dc): (isize, isize) = match dir {

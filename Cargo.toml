@@ -8,6 +8,9 @@ publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+print = []
+
 [dependencies]
 clap = "2.33.0"
 
