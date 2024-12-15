@@ -118,24 +118,18 @@ fn simulate<const WIDE: bool>(
     start: (usize, usize),
     moves: &[u8],
 ) -> (Vec<Vec<bool>>, usize) {
-    let (mut r, mut c) = start;
-    if WIDE {
-        c *= 2;
-    }
-
-    let walls = if WIDE {
-        walls
-            .into_iter()
-            .map(|row| row.into_iter().flat_map(|cell| [cell, cell]).collect())
-            .collect()
+    let (mut r, c) = start;
+    let (mut c, walls, mut boxes) = if WIDE {
+        (
+            c * 2,
+            walls
+                .into_iter()
+                .map(|row| row.into_iter().flat_map(|cell| [cell, cell]).collect())
+                .collect(),
+            boxes.into_iter().map(|(r, c)| (r, c * 2)).collect(),
+        )
     } else {
-        walls
-    };
-
-    let mut boxes: HashSet<(usize, usize)> = if WIDE {
-        boxes.into_iter().map(|(r, c)| (r, c * 2)).collect()
-    } else {
-        boxes
+        (c, walls, boxes)
     };
 
     for dir in moves {
