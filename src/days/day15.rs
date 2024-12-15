@@ -79,50 +79,7 @@ fn print_state<const WIDE: bool>(
     println!()
 }
 
-fn solve_a(
-    walls: &[Vec<bool>],
-    mut boxes: HashSet<(usize, usize)>,
-    start: (usize, usize),
-    moves: &[u8],
-) -> usize {
-    let (mut r, mut c) = start;
-    for dir in moves {
-        #[cfg(feature = "print")]
-        print_state::<false>(walls, &boxes, (r, c), *dir);
-        let (dr, dc): (isize, isize) = match dir {
-            0 => (-1, 0),
-            1 => (0, 1),
-            2 => (1, 0),
-            3 => (0, -1),
-            _ => unreachable!(),
-        };
-        let rr = r.checked_add_signed(dr).unwrap();
-        let cc = c.checked_add_signed(dc).unwrap();
-        let move_valid = !walls[rr][cc]
-            && !std::iter::successors(Some((rr, cc)), |(r, c)| {
-                Some((r.checked_add_signed(dr)?, c.checked_add_signed(dc)?))
-            })
-            .take_while(|(rr, cc)| !walls[*rr][*cc])
-            .all(|pos| boxes.contains(&pos));
-        if move_valid {
-            r = rr;
-            c = cc;
-            if boxes.contains(&(r, c)) {
-                boxes.remove(&(r, c));
-                let mut box_r = r.checked_add_signed(dr).unwrap();
-                let mut box_c = c.checked_add_signed(dc).unwrap();
-                while boxes.contains(&(box_r, box_c)) {
-                    box_r = box_r.checked_add_signed(dr).unwrap();
-                    box_c = box_c.checked_add_signed(dc).unwrap();
-                }
-                boxes.insert((box_r, box_c));
-            }
-        }
-    }
-    boxes.iter().map(|(r, c)| r * 100 + c).sum()
-}
-
-fn collect_moving_boxes(
+fn collect_moving_boxes<const WIDE: bool>(
     r: usize,
     c: usize,
     dr: isize,
@@ -134,28 +91,37 @@ fn collect_moving_boxes(
         if dr != 0 {
             if let Some((br, bc)) = boxes
                 .get(&(r, c))
-                .or_else(|| boxes.get(&(r, c - 1)))
+                .or_else(|| if WIDE { boxes.get(&(r, c - 1)) } else { None })
                 .copied()
             {
                 let rr = br.wrapping_add_signed(dr);
                 let cc = bc.wrapping_add_signed(dc);
-                let mut moving = collect_moving_boxes(rr, cc, dr, dc, boxes, walls);
-                moving.extend(collect_moving_boxes(rr, cc + 1, dr, dc, boxes, walls));
+                let mut moving = collect_moving_boxes::<WIDE>(rr, cc, dr, dc, boxes, walls);
+                if WIDE {
+                    moving.extend(collect_moving_boxes::<WIDE>(
+                        rr,
+                        cc + 1,
+                        dr,
+                        dc,
+                        boxes,
+                        walls,
+                    ));
+                }
                 moving.insert((br, bc));
                 moving
             } else {
                 HashSet::with_capacity(0)
             }
         } else if dc != 0 {
-            let dcc = if dc < 0 { dc } else { 2 * dc };
+            let dcc = if WIDE && dc > 0 { 2 * dc } else { dc };
             if let Some((br, bc)) = boxes
                 .get(&(r, c))
-                .or_else(|| boxes.get(&(r, c - 1)))
+                .or_else(|| if WIDE { boxes.get(&(r, c - 1)) } else { None })
                 .copied()
             {
                 let rr = br.wrapping_add_signed(dr);
                 let cc = bc.wrapping_add_signed(dcc);
-                let mut moving = collect_moving_boxes(rr, cc, dr, dc, boxes, walls);
+                let mut moving = collect_moving_boxes::<WIDE>(rr, cc, dr, dc, boxes, walls);
                 moving.insert((br, bc));
                 moving
             } else {
@@ -169,29 +135,35 @@ fn collect_moving_boxes(
     }
 }
 
-fn solve_b(
+fn simulate<const WIDE: bool>(
     walls: Vec<Vec<bool>>,
     boxes: HashSet<(usize, usize)>,
     start: (usize, usize),
     moves: &[u8],
-) -> usize {
+) -> (Vec<Vec<bool>>, usize) {
     let (mut r, mut c) = start;
-    c *= 2;
+    if WIDE {
+        c *= 2;
+    }
 
-    let walls: Vec<Vec<bool>> = walls
-        .into_iter()
-        .map(|row| row.into_iter().flat_map(|cell| [cell, cell]).collect())
-        .collect();
-    let mut boxes: HashSet<(usize, usize)> = boxes
-        // let mut boxes: HashSet<(usize, usize, bool)> = boxes
-        .into_iter()
-        // .flat_map(|(r, c)| [(r, c * 2, true), (r, c * 2 + 1, false)])
-        .map(|(r, c)| (r, c * 2))
-        .collect();
+    let walls = if WIDE {
+        walls
+            .into_iter()
+            .map(|row| row.into_iter().flat_map(|cell| [cell, cell]).collect())
+            .collect()
+    } else {
+        walls
+    };
+
+    let mut boxes: HashSet<(usize, usize)> = if WIDE {
+        boxes.into_iter().map(|(r, c)| (r, c * 2)).collect()
+    } else {
+        boxes
+    };
 
     for dir in moves {
         #[cfg(feature = "print")]
-        print_state::<true>(&walls, &boxes, (r, c), *dir);
+        print_state::<WIDE>(&walls, &boxes, (r, c), *dir);
 
         let (dr, dc): (isize, isize) = match dir {
             0 => (-1, 0),
@@ -203,11 +175,11 @@ fn solve_b(
         let rr = r.checked_add_signed(dr).unwrap();
         let cc = c.checked_add_signed(dc).unwrap();
         if !walls[rr][cc] {
-            let boxes_moving = collect_moving_boxes(rr, cc, dr, dc, &boxes, &walls);
+            let boxes_moving = collect_moving_boxes::<WIDE>(rr, cc, dr, dc, &boxes, &walls);
             if boxes_moving.iter().all(|(br, bc)| {
                 let brr = br.wrapping_add_signed(dr);
                 let bcc = bc.wrapping_add_signed(dc);
-                !walls[brr][bcc] && !walls[brr][bcc + 1]
+                !walls[brr][bcc] && (!WIDE || !walls[brr][bcc + 1])
             }) {
                 r = rr;
                 c = cc;
@@ -222,7 +194,8 @@ fn solve_b(
             }
         }
     }
-    boxes.iter().map(|(r, c)| r * 100 + c).sum()
+
+    (walls, boxes.iter().map(|(r, c)| r * 100 + c).sum())
 }
 
 pub fn solve(lines: &[String]) -> Solution {
@@ -268,8 +241,8 @@ pub fn solve(lines: &[String]) -> Solution {
         })
         .collect();
 
-    (
-        solve_a(&walls, boxes.clone(), start, &moves).to_string(),
-        solve_b(walls, boxes, start, &moves).to_string(),
-    )
+    let (walls, solution_a) = simulate::<false>(walls, boxes.clone(), start, &moves);
+    let (_, solution_b) = simulate::<true>(walls, boxes, start, &moves);
+
+    (solution_a.to_string(), solution_b.to_string())
 }
