@@ -86,15 +86,15 @@ fn collect_moving_boxes<const WIDE: bool>(
     dc: isize,
     boxes: &HashSet<(usize, usize)>,
     walls: &[Vec<bool>],
-    mut moving: HashSet<(usize, usize)>,
-) -> HashSet<(usize, usize)> {
+    mut moving: Vec<(usize, usize)>,
+) -> Vec<(usize, usize)> {
     if !walls[r][c] {
         if let Some((br, bc)) = boxes
             .get(&(r, c))
             .or_else(|| if WIDE { boxes.get(&(r, c - 1)) } else { None })
             .copied()
         {
-            moving.insert((br, bc));
+            moving.push((br, bc));
             let dcc = if WIDE && dc > 0 { 2 * dc } else { dc };
             let rr = br.wrapping_add_signed(dr);
             let cc = bc.wrapping_add_signed(dcc);
@@ -160,7 +160,7 @@ fn simulate<const WIDE: bool>(
         let cc = c.checked_add_signed(dc).unwrap();
         if !walls[rr][cc] {
             let boxes_moving =
-                collect_moving_boxes::<WIDE>(rr, cc, dr, dc, &boxes, &walls, HashSet::new());
+                collect_moving_boxes::<WIDE>(rr, cc, dr, dc, &boxes, &walls, Vec::new());
             if boxes_moving.iter().all(|(br, bc)| {
                 let brr = br.wrapping_add_signed(dr);
                 let bcc = bc.wrapping_add_signed(dc);
