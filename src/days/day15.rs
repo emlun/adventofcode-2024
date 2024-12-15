@@ -87,35 +87,28 @@ fn collect_moving_boxes<const WIDE: bool>(
     boxes: &HashSet<(usize, usize)>,
     walls: &[Vec<bool>],
     mut moving: Vec<(usize, usize)>,
-) -> Vec<(usize, usize)> {
-    if !walls[r][c] {
-        if let Some((br, bc)) = boxes
-            .get(&(r, c))
-            .or_else(|| if WIDE { boxes.get(&(r, c - 1)) } else { None })
-            .copied()
-        {
-            moving.push((br, bc));
-            let dcc = if WIDE && dc > 0 { 2 * dc } else { dc };
-            let rr = br.wrapping_add_signed(dr);
-            let cc = bc.wrapping_add_signed(dcc);
-            collect_moving_boxes::<WIDE>(
-                rr,
-                cc,
-                dr,
-                dc,
-                boxes,
-                walls,
-                if WIDE && dr != 0 {
-                    collect_moving_boxes::<WIDE>(rr, cc + 1, dr, dc, boxes, walls, moving)
-                } else {
-                    moving
-                },
-            )
+) -> Option<Vec<(usize, usize)>> {
+    if let Some((br, bc)) = boxes
+        .get(&(r, c))
+        .or_else(|| if WIDE { boxes.get(&(r, c - 1)) } else { None })
+        .copied()
+    {
+        moving.push((br, bc));
+        let brr = br.wrapping_add_signed(dr);
+        let bcc = bc.wrapping_add_signed(dc);
+        let bcc_neighbor = bc.wrapping_add_signed(if WIDE && dc > 0 { 2 * dc } else { dc });
+        if !(walls[brr][bcc] || (WIDE && walls[brr][bcc + 1])) {
+            let moving = if WIDE && dr != 0 {
+                collect_moving_boxes::<WIDE>(brr, bcc_neighbor + 1, dr, dc, boxes, walls, moving)
+            } else {
+                Some(moving)
+            }?;
+            collect_moving_boxes::<WIDE>(brr, bcc_neighbor, dr, dc, boxes, walls, moving)
         } else {
-            moving
+            None
         }
     } else {
-        moving
+        Some(moving)
     }
 }
 
@@ -159,13 +152,9 @@ fn simulate<const WIDE: bool>(
         let rr = r.checked_add_signed(dr).unwrap();
         let cc = c.checked_add_signed(dc).unwrap();
         if !walls[rr][cc] {
-            let boxes_moving =
-                collect_moving_boxes::<WIDE>(rr, cc, dr, dc, &boxes, &walls, Vec::new());
-            if boxes_moving.iter().all(|(br, bc)| {
-                let brr = br.wrapping_add_signed(dr);
-                let bcc = bc.wrapping_add_signed(dc);
-                !walls[brr][bcc] && (!WIDE || !walls[brr][bcc + 1])
-            }) {
+            if let Some(boxes_moving) =
+                collect_moving_boxes::<WIDE>(rr, cc, dr, dc, &boxes, &walls, Vec::new())
+            {
                 r = rr;
                 c = cc;
                 for bx in &boxes_moving {
