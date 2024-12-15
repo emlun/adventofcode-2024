@@ -45,11 +45,11 @@ fn print_state<const WIDE: bool>(
             .map(|(i, _)| (i % 10).to_string())
             .collect::<String>()
     );
-    for r in 0..walls.len() {
+    for (r, row) in walls.iter().enumerate() {
         println!(
             "{:02}  {}",
             r,
-            (0..walls[r].len())
+            (0..row.len())
                 .map(|c| {
                     if walls[r][c] {
                         '#'
