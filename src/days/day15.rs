@@ -133,8 +133,11 @@ fn simulate<const WIDE: bool>(
     };
 
     for dir in moves {
-        #[cfg(feature = "print")]
-        print_state::<WIDE>(&walls, &boxes, (r, c), *dir);
+        #[cfg(feature = "animate")]
+        {
+            print_state::<WIDE>(&walls, &boxes, (r, c), *dir);
+            std::thread::sleep(std::time::Duration::from_millis(16));
+        }
 
         let (dr, dc): (isize, isize) = match dir {
             0 => (-1, 0),
@@ -162,6 +165,9 @@ fn simulate<const WIDE: bool>(
             }
         }
     }
+
+    #[cfg(feature = "print")]
+    print_state::<WIDE>(&walls, &boxes, (r, c), moves.last().copied().unwrap_or(0));
 
     (walls, boxes.iter().map(|(r, c)| r * 100 + c).sum())
 }
