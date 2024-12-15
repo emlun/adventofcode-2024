@@ -88,45 +88,27 @@ fn collect_moving_boxes<const WIDE: bool>(
     walls: &[Vec<bool>],
 ) -> HashSet<(usize, usize)> {
     if !walls[r][c] {
-        if dr != 0 {
-            if let Some((br, bc)) = boxes
-                .get(&(r, c))
-                .or_else(|| if WIDE { boxes.get(&(r, c - 1)) } else { None })
-                .copied()
-            {
-                let rr = br.wrapping_add_signed(dr);
-                let cc = bc.wrapping_add_signed(dc);
-                let mut moving = collect_moving_boxes::<WIDE>(rr, cc, dr, dc, boxes, walls);
-                if WIDE {
-                    moving.extend(collect_moving_boxes::<WIDE>(
-                        rr,
-                        cc + 1,
-                        dr,
-                        dc,
-                        boxes,
-                        walls,
-                    ));
-                }
-                moving.insert((br, bc));
-                moving
-            } else {
-                HashSet::with_capacity(0)
-            }
-        } else if dc != 0 {
+        if let Some((br, bc)) = boxes
+            .get(&(r, c))
+            .or_else(|| if WIDE { boxes.get(&(r, c - 1)) } else { None })
+            .copied()
+        {
             let dcc = if WIDE && dc > 0 { 2 * dc } else { dc };
-            if let Some((br, bc)) = boxes
-                .get(&(r, c))
-                .or_else(|| if WIDE { boxes.get(&(r, c - 1)) } else { None })
-                .copied()
-            {
-                let rr = br.wrapping_add_signed(dr);
-                let cc = bc.wrapping_add_signed(dcc);
-                let mut moving = collect_moving_boxes::<WIDE>(rr, cc, dr, dc, boxes, walls);
-                moving.insert((br, bc));
-                moving
-            } else {
-                HashSet::with_capacity(0)
+            let rr = br.wrapping_add_signed(dr);
+            let cc = bc.wrapping_add_signed(dcc);
+            let mut moving = collect_moving_boxes::<WIDE>(rr, cc, dr, dc, boxes, walls);
+            if WIDE && dr != 0 {
+                moving.extend(collect_moving_boxes::<WIDE>(
+                    rr,
+                    cc + 1,
+                    dr,
+                    dc,
+                    boxes,
+                    walls,
+                ));
             }
+            moving.insert((br, bc));
+            moving
         } else {
             HashSet::with_capacity(0)
         }
