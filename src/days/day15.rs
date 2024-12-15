@@ -23,8 +23,11 @@ fn print_state<const WIDE: bool>(
     walls: &[Vec<bool>],
     boxes: &HashSet<(usize, usize)>,
     pos: (usize, usize),
+    step: usize,
+    num_steps: usize,
     dir: u8,
 ) {
+    println!("Step {} of {}", step, num_steps);
     println!(
         "    {}",
         walls[0]
@@ -132,13 +135,10 @@ fn simulate<const WIDE: bool>(
         (c, walls, boxes)
     };
 
-    for dir in moves {
-        #[cfg(feature = "animate")]
-        {
-            print_state::<WIDE>(&walls, &boxes, (r, c), *dir);
-            std::thread::sleep(std::time::Duration::from_millis(16));
-        }
+    #[cfg(feature = "animate")]
+    let mut i = 0;
 
+    for dir in moves.iter() {
         let (dr, dc): (isize, isize) = match dir {
             0 => (-1, 0),
             1 => (0, 1),
@@ -164,10 +164,24 @@ fn simulate<const WIDE: bool>(
                 );
             }
         }
+
+        #[cfg(feature = "animate")]
+        {
+            i += 1;
+            print_state::<WIDE>(&walls, &boxes, (r, c), i, moves.len(), *dir);
+            std::thread::sleep(std::time::Duration::from_millis(16));
+        }
     }
 
-    #[cfg(feature = "print")]
-    print_state::<WIDE>(&walls, &boxes, (r, c), moves.last().copied().unwrap_or(0));
+    #[cfg(all(feature = "print", not(feature = "animate")))]
+    print_state::<WIDE>(
+        &walls,
+        &boxes,
+        (r, c),
+        moves.len(),
+        moves.len(),
+        moves.last().copied().unwrap_or(0),
+    );
 
     (walls, boxes.iter().map(|(r, c)| r * 100 + c).sum())
 }
