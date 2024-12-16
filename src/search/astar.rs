@@ -100,6 +100,47 @@ where
     None
 }
 
+pub fn astar_all_best<S>(initial_state: S) -> Vec<S>
+where
+    S: State,
+{
+    let mut queue: BinaryHeap<StateOrd<S>> = BinaryHeap::new();
+    let mut visited: HashMap<S::DuplicationKey, S::Value> = HashMap::new();
+
+    queue.push(StateOrd(initial_state));
+    let mut best: Vec<S> = Vec::new();
+
+    while let Some(StateOrd(state)) = queue.pop() {
+        if !best.is_empty() && state.estimate() > best[0].value() {
+            break;
+        } else if state.finished() {
+            best.push(state);
+        } else if visited
+            .get(&state.duplication_key())
+            .map(|v| state.value() <= *v)
+            .unwrap_or(true)
+        {
+            for next_state in state.generate_moves() {
+                let dk = next_state.duplication_key();
+                let nv = next_state.value();
+                match visited.entry(dk) {
+                    Entry::Occupied(mut occ) if nv <= *occ.get() => {
+                        occ.insert(nv);
+                        queue.push(StateOrd(next_state));
+                    }
+                    Entry::Vacant(vac) => {
+                        vac.insert(nv);
+                        queue.push(StateOrd(next_state));
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    best
+}
+
 pub fn astar_optimize<S>(initial_state: S) -> S::Value
 where
     S: State,

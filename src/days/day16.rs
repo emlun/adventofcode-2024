@@ -14,9 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::{collections::HashSet, rc::Rc};
+
 use crate::{
     common::Solution,
-    search::astar::{self, astar},
+    search::astar::{self, astar_all_best},
 };
 
 #[derive(Eq, PartialEq)]
@@ -29,9 +31,22 @@ struct Game {
 #[derive(Eq, PartialEq)]
 struct State<'game> {
     game: &'game Game,
+    prev: Option<Rc<Self>>,
     pos: (usize, usize),
     dir: u8,
     score: usize,
+}
+
+impl<'game> State<'game> {
+    fn path(&self) -> Vec<(usize, usize)> {
+        let mut path = self
+            .prev
+            .as_ref()
+            .map(|prev| prev.path())
+            .unwrap_or_default();
+        path.push(self.pos);
+        path
+    }
 }
 
 impl<'game> astar::State for State<'game> {
@@ -55,28 +70,33 @@ impl<'game> astar::State for State<'game> {
 
     fn generate_moves(self) -> Self::NewStates {
         let (r, c) = self.pos;
+        let prev = Rc::new(self);
         Box::new(
             [
                 Self {
-                    dir: (self.dir + 1) % 4,
-                    score: self.score + 1000,
-                    ..self
+                    dir: (prev.dir + 1) % 4,
+                    score: prev.score + 1000,
+                    prev: Some(Rc::clone(&prev)),
+                    ..*prev
                 },
                 Self {
-                    dir: (self.dir + 3) % 4,
-                    score: self.score + 1000,
-                    ..self
+                    dir: (prev.dir + 3) % 4,
+                    score: prev.score + 1000,
+                    prev: Some(Rc::clone(&prev)),
+                    ..*prev
                 },
                 Self {
-                    pos: match self.dir {
+                    game: prev.game,
+                    pos: match prev.dir {
                         0 => (r - 1, c),
                         1 => (r, c + 1),
                         2 => (r + 1, c),
                         3 => (r, c - 1),
                         _ => unreachable!(),
                     },
-                    score: self.score + 1,
-                    ..self
+                    score: prev.score + 1,
+                    dir: prev.dir,
+                    prev: Some(prev),
                 },
             ]
             .into_iter()
@@ -88,19 +108,8 @@ impl<'game> astar::State for State<'game> {
     }
 }
 
-fn solve_a(game: &Game) -> usize {
-    astar(State {
-        game,
-        pos: game.start,
-        dir: 1,
-        score: 0,
-    })
-    .unwrap()
-    .score
-}
-
 pub fn solve(lines: &[String]) -> Solution {
-    let (walls, start, end): (Vec<Vec<bool>>, (usize, usize), (usize, usize)) = lines
+    let (walls, start, end) = lines
         .iter()
         .filter(|line| !line.is_empty())
         .enumerate()
@@ -124,5 +133,23 @@ pub fn solve(lines: &[String]) -> Solution {
         );
     let game = Game { walls, start, end };
 
-    (solve_a(&game).to_string(), "".to_string())
+    let paths = astar_all_best(State {
+        game: &game,
+        prev: None,
+        pos: game.start,
+        dir: 1,
+        score: 0,
+    });
+    let solution_a = paths[0].score;
+    let tiles =
+        paths
+            .into_iter()
+            .map(|last| last.path())
+            .fold(HashSet::new(), |mut tiles, path| {
+                tiles.extend(path);
+                tiles
+            });
+    let solution_b = tiles.len();
+
+    (solution_a.to_string(), solution_b.to_string())
 }
