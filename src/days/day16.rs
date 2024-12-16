@@ -38,6 +38,47 @@ struct State<'game> {
 }
 
 impl<'game> State<'game> {
+    fn step(&self) -> (usize, usize) {
+        let (r, c) = self.pos;
+        match self.dir {
+            0 => (r - 1, c),
+            1 => (r, c + 1),
+            2 => (r + 1, c),
+            3 => (r, c - 1),
+            _ => unreachable!(),
+        }
+    }
+
+    fn is_corridor(&self) -> bool {
+        let (r, c) = self.pos;
+        match self.dir {
+            0 | 2 => self.game.walls[r][c - 1] && self.game.walls[r][c + 1],
+            1 | 3 => self.game.walls[r - 1][c] && self.game.walls[r + 1][c],
+            _ => unreachable!(),
+        }
+    }
+
+    fn walk(self) -> Self {
+        if self.pos == self.game.end {
+            self
+        } else {
+            let new_pos = Some(self.step())
+                .filter(|(rr, cc)| !self.game.walls[*rr][*cc] && self.is_corridor());
+            if let Some(pos) = new_pos {
+                Self {
+                    pos,
+                    dir: self.dir,
+                    game: self.game,
+                    score: self.score + 1,
+                    prev: Some(Rc::new(self)),
+                }
+                .walk()
+            } else {
+                self
+            }
+        }
+    }
+
     fn path(&self, path: HashSet<(usize, usize)>) -> HashSet<(usize, usize)> {
         let mut path = if let Some(prev) = &self.prev {
             prev.path(path)
@@ -69,7 +110,6 @@ impl<'game> astar::State for State<'game> {
     }
 
     fn generate_moves(self) -> Self::NewStates {
-        let (r, c) = self.pos;
         let prev = Rc::new(self);
         Box::new(
             [
@@ -87,13 +127,7 @@ impl<'game> astar::State for State<'game> {
                 },
                 Self {
                     game: prev.game,
-                    pos: match prev.dir {
-                        0 => (r - 1, c),
-                        1 => (r, c + 1),
-                        2 => (r + 1, c),
-                        3 => (r, c - 1),
-                        _ => unreachable!(),
-                    },
+                    pos: prev.step(),
                     score: prev.score + 1,
                     dir: prev.dir,
                     prev: Some(prev),
@@ -103,7 +137,8 @@ impl<'game> astar::State for State<'game> {
             .filter(|state| {
                 let (rr, cc) = state.pos;
                 !state.game.walls[rr][cc]
-            }),
+            })
+            .map(State::walk),
         )
     }
 }
