@@ -29,6 +29,7 @@ pub mod day12;
 pub mod day13;
 pub mod day14;
 pub mod day15;
+pub mod day16;
 
 macro_rules! days {
     ($($day_mod:ident),*) => {
@@ -47,5 +48,5 @@ pub fn all_numbers() -> Vec<u8> {
 
 days!(
     day01, day02, day03, day04, day05, day06, day07, day08, day09, day10, day11, day12, day13,
-    day14, day15
+    day14, day15, day16
 );
