@@ -35,20 +35,22 @@ struct State<'game> {
 }
 
 impl<'game> astar::State for State<'game> {
-    type DuplicationKey = ((usize, usize), u8, usize);
+    type DuplicationKey = ((usize, usize), u8);
     type Value = usize;
     type NewStates = Box<dyn Iterator<Item = Self> + 'game>;
 
     fn value(&self) -> Self::Value {
         self.score
     }
+
     fn estimate(&self) -> Self::Value {
         let (er, ec) = self.game.end;
         let (r, c) = self.pos;
         self.value() + r.abs_diff(er) + c.abs_diff(ec)
     }
+
     fn duplication_key(&self) -> Self::DuplicationKey {
-        (self.pos, self.dir, self.score)
+        (self.pos, self.dir)
     }
 
     fn generate_moves(self) -> Self::NewStates {
