@@ -49,6 +49,17 @@ impl<'game> State<'game> {
         }
     }
 
+    fn step_turn(&self, turn: u8) -> ((usize, usize), u8) {
+        let (r, c) = self.pos;
+        match (self.dir + turn) % 4 {
+            0 => ((r - 1, c), 0),
+            1 => ((r, c + 1), 1),
+            2 => ((r + 1, c), 2),
+            3 => ((r, c - 1), 3),
+            _ => unreachable!(),
+        }
+    }
+
     fn is_corridor(&self) -> bool {
         let (r, c) = self.pos;
         match self.dir {
@@ -62,14 +73,39 @@ impl<'game> State<'game> {
         if self.pos == self.game.end {
             self
         } else {
-            let new_pos = Some(self.step())
-                .filter(|(rr, cc)| !self.game.walls[*rr][*cc] && self.is_corridor());
-            if let Some(pos) = new_pos {
+            let forward = self.step();
+            let (fr, fc) = forward;
+            if let Some(pos) =
+                Some(forward).filter(|(rr, cc)| !self.game.walls[*rr][*cc] && self.is_corridor())
+            {
                 Self {
                     pos,
                     dir: self.dir,
                     game: self.game,
                     score: self.score + 1,
+                    prev: Some(Rc::new(self)),
+                }
+                .walk()
+            } else if let Some((pos, dir)) = {
+                let ((rr, rc), rdir) = self.step_turn(1);
+                let ((lr, lc), ldir) = self.step_turn(3);
+                if self.game.walls[fr][fc] {
+                    if self.game.walls[lr][lc] && !self.game.walls[rr][rc] {
+                        Some(((rr, rc), rdir))
+                    } else if self.game.walls[rr][rc] && !self.game.walls[lr][lc] {
+                        Some(((lr, lc), ldir))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } {
+                Self {
+                    pos,
+                    dir,
+                    game: self.game,
+                    score: self.score + 1001,
                     prev: Some(Rc::new(self)),
                 }
                 .walk()
