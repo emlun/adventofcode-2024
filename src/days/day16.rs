@@ -38,13 +38,13 @@ struct State<'game> {
 }
 
 impl<'game> State<'game> {
-    fn path(&self) -> Vec<(usize, usize)> {
-        let mut path = self
-            .prev
-            .as_ref()
-            .map(|prev| prev.path())
-            .unwrap_or_default();
-        path.push(self.pos);
+    fn path(&self, path: HashSet<(usize, usize)>) -> HashSet<(usize, usize)> {
+        let mut path = if let Some(prev) = &self.prev {
+            prev.path(path)
+        } else {
+            path
+        };
+        path.insert(self.pos);
         path
     }
 }
@@ -141,14 +141,9 @@ pub fn solve(lines: &[String]) -> Solution {
         score: 0,
     });
     let solution_a = paths[0].score;
-    let tiles =
-        paths
-            .into_iter()
-            .map(|last| last.path())
-            .fold(HashSet::new(), |mut tiles, path| {
-                tiles.extend(path);
-                tiles
-            });
+    let tiles = paths
+        .into_iter()
+        .fold(HashSet::new(), |tiles, state| state.path(tiles));
     let solution_b = tiles.len();
 
     (solution_a.to_string(), solution_b.to_string())
