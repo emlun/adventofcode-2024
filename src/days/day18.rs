@@ -99,7 +99,7 @@ fn solve_b(walls: &HashMap<(usize, usize), usize>) -> (usize, usize) {
         }
         let t = (t_min + t_max) / 2;
         let game = Game {
-            walls: &walls,
+            walls,
             start: (0, 0),
             end: GOAL,
             t: t + 1,
