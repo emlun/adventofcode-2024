@@ -22,8 +22,8 @@ use crate::{
 };
 
 #[derive(Eq, PartialEq)]
-struct Game {
-    walls: HashMap<(usize, usize), usize>,
+struct Game<'walls> {
+    walls: &'walls HashMap<(usize, usize), usize>,
     start: (usize, usize),
     end: (usize, usize),
     t: usize,
@@ -31,7 +31,7 @@ struct Game {
 
 #[derive(Eq, PartialEq)]
 struct State<'game> {
-    game: &'game Game,
+    game: &'game Game<'game>,
     pos: (usize, usize),
     steps: usize,
 }
@@ -88,6 +88,9 @@ impl<'game> astar::State for State<'game> {
 }
 
 pub fn solve(lines: &[String]) -> Solution {
+    const GOAL: (usize, usize) = (70, 70);
+    const T: usize = 1024;
+
     let walls = lines
         .iter()
         .filter(|line| !line.is_empty())
@@ -98,10 +101,10 @@ pub fn solve(lines: &[String]) -> Solution {
         })
         .collect();
     let game = Game {
-        walls,
+        walls: &walls,
         start: (0, 0),
-        end: (70, 70),
-        t: 1024,
+        end: GOAL,
+        t: T,
     };
 
     let solution_a = astar(State {
@@ -112,5 +115,36 @@ pub fn solve(lines: &[String]) -> Solution {
     .unwrap()
     .steps;
 
-    (solution_a.to_string(), "".to_string())
+    let mut t_min = T;
+    let mut t_max = walls.len();
+    let tb = loop {
+        if t_min == t_max {
+            break t_min;
+        }
+        let t = (t_min + t_max) / 2;
+        let game = Game {
+            walls: &walls,
+            start: (0, 0),
+            end: GOAL,
+            t: t + 1,
+        };
+        if astar(State {
+            game: &game,
+            pos: game.start,
+            steps: 0,
+        })
+        .is_some()
+        {
+            t_min = t + 1;
+        } else {
+            t_max = t;
+        }
+    };
+    let solution_b = walls
+        .iter()
+        .find_map(|(pos, t)| if *t == tb { Some(pos) } else { None })
+        .unwrap();
+    let (bx, by) = solution_b;
+
+    (solution_a.to_string(), format!("{},{}", bx, by))
 }
