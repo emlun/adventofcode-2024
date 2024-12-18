@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     common::Solution,
-    search::astar::{self, astar},
+    search::astar::{self, astar, State as AstarState},
 };
 
 const GOAL: (usize, usize) = (70, 70);
@@ -90,6 +90,23 @@ impl<'game> astar::State for State<'game> {
     }
 }
 
+fn is_solvable(game: &Game, state: State, visited: &mut HashSet<(usize, usize)>) -> bool {
+    let State { pos, .. } = state;
+    if pos == game.end {
+        true
+    } else {
+        if !visited.contains(&pos) {
+            visited.insert(pos);
+            state
+                .generate_moves()
+                .into_iter()
+                .any(|state| is_solvable(game, state, visited))
+        } else {
+            false
+        }
+    }
+}
+
 fn solve_b(walls: &HashMap<(usize, usize), usize>) -> (usize, usize) {
     let mut t_min = T;
     let mut t_max = walls.len();
@@ -104,13 +121,16 @@ fn solve_b(walls: &HashMap<(usize, usize), usize>) -> (usize, usize) {
             end: GOAL,
             t: t + 1,
         };
-        if astar(State {
-            game: &game,
-            pos: game.start,
-            steps: 0,
-        })
-        .is_some()
-        {
+        let mut visited = HashSet::new();
+        if is_solvable(
+            &game,
+            State {
+                game: &game,
+                pos: game.start,
+                steps: 0,
+            },
+            &mut visited,
+        ) {
             t_min = t + 1;
         } else {
             t_max = t;
