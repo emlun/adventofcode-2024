@@ -46,7 +46,7 @@ fn step(
 
     let ip = match program[ip] {
         ADV => {
-            a = a >> combo_op;
+            a >>= combo_op;
             ip + 2
         }
         BXL => {
@@ -65,7 +65,7 @@ fn step(
             }
         }
         BXC => {
-            b = b ^ c;
+            b ^= c;
             ip + 2
         }
         OUT => {
