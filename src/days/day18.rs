@@ -21,6 +21,9 @@ use crate::{
     search::astar::{self, astar},
 };
 
+const GOAL: (usize, usize) = (70, 70);
+const T: usize = 1024;
+
 #[derive(Eq, PartialEq)]
 struct Game<'walls> {
     walls: &'walls HashMap<(usize, usize), usize>,
@@ -87,34 +90,7 @@ impl<'game> astar::State for State<'game> {
     }
 }
 
-pub fn solve(lines: &[String]) -> Solution {
-    const GOAL: (usize, usize) = (70, 70);
-    const T: usize = 1024;
-
-    let walls = lines
-        .iter()
-        .filter(|line| !line.is_empty())
-        .enumerate()
-        .map(|(t, line)| {
-            let (xs, ys) = line.split_once(',').unwrap();
-            ((xs.parse().unwrap(), ys.parse().unwrap()), t)
-        })
-        .collect();
-    let game = Game {
-        walls: &walls,
-        start: (0, 0),
-        end: GOAL,
-        t: T,
-    };
-
-    let solution_a = astar(State {
-        game: &game,
-        pos: game.start,
-        steps: 0,
-    })
-    .unwrap()
-    .steps;
-
+fn solve_b(walls: &HashMap<(usize, usize), usize>) -> (usize, usize) {
     let mut t_min = T;
     let mut t_max = walls.len();
     let tb = loop {
@@ -140,11 +116,38 @@ pub fn solve(lines: &[String]) -> Solution {
             t_max = t;
         }
     };
-    let solution_b = walls
+    *walls
         .iter()
         .find_map(|(pos, t)| if *t == tb { Some(pos) } else { None })
-        .unwrap();
-    let (bx, by) = solution_b;
+        .unwrap()
+}
+
+pub fn solve(lines: &[String]) -> Solution {
+    let walls = lines
+        .iter()
+        .filter(|line| !line.is_empty())
+        .enumerate()
+        .map(|(t, line)| {
+            let (xs, ys) = line.split_once(',').unwrap();
+            ((xs.parse().unwrap(), ys.parse().unwrap()), t)
+        })
+        .collect();
+    let game = Game {
+        walls: &walls,
+        start: (0, 0),
+        end: GOAL,
+        t: T,
+    };
+
+    let solution_a = astar(State {
+        game: &game,
+        pos: game.start,
+        steps: 0,
+    })
+    .unwrap()
+    .steps;
+
+    let (bx, by) = solve_b(&walls);
 
     (solution_a.to_string(), format!("{},{}", bx, by))
 }
