@@ -121,7 +121,7 @@ fn solve_b(program: &[u8], b: u64, c: u64, find_output: &[u8]) -> u64 {
         let output = solve_a(program, a, b, c);
         if output.len() == find_output.len() && output[i..] == find_output[i..] {
             if i == 0 {
-                break;
+                break a;
             } else {
                 i -= 1;
             }
@@ -134,14 +134,6 @@ fn solve_b(program: &[u8], b: u64, c: u64, find_output: &[u8]) -> u64 {
             i += 1;
         }
     }
-    let a = bit_segments
-        .iter()
-        .rev()
-        .copied()
-        .fold(0, |a, bits| (a << adv_bits) | bits);
-    let output = solve_a(program, a, b, c);
-    assert_eq!(output, find_output);
-    a
 }
 
 pub fn solve(lines: &[String]) -> Solution {
