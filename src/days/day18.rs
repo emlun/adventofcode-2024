@@ -94,16 +94,13 @@ fn is_solvable(game: &Game, state: State, visited: &mut HashSet<(usize, usize)>)
     let State { pos, .. } = state;
     if pos == game.end {
         true
+    } else if !visited.contains(&pos) {
+        visited.insert(pos);
+        state
+            .generate_moves()
+            .any(|state| is_solvable(game, state, visited))
     } else {
-        if !visited.contains(&pos) {
-            visited.insert(pos);
-            state
-                .generate_moves()
-                .into_iter()
-                .any(|state| is_solvable(game, state, visited))
-        } else {
-            false
-        }
+        false
     }
 }
 
