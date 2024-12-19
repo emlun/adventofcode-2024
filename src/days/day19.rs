@@ -14,12 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
-use crate::{
-    common::Solution,
-    search::astar::{self, astar},
-};
+use crate::common::Solution;
 
 #[derive(Eq, PartialEq)]
 struct Game<'pat> {
@@ -31,40 +28,6 @@ struct Game<'pat> {
 struct State<'game> {
     game: &'game Game<'game>,
     prefix: String,
-}
-
-impl<'game> astar::State for State<'game> {
-    type DuplicationKey = String;
-    type Value = usize;
-    type NewStates = Box<dyn Iterator<Item = Self> + 'game>;
-
-    fn value(&self) -> Self::Value {
-        self.prefix.len()
-    }
-
-    fn estimate(&self) -> Self::Value {
-        self.value()
-    }
-
-    fn duplication_key(&self) -> Self::DuplicationKey {
-        self.prefix.clone()
-    }
-
-    fn generate_moves(self) -> Self::NewStates {
-        let game = self.game;
-        Box::new(
-            self.game
-                .patterns
-                .iter()
-                .map(move |pat| format!("{}{}", self.prefix, pat))
-                .filter(|prefix| self.game.goal.starts_with(prefix))
-                .map(|prefix| Self { game, prefix }),
-        )
-    }
-
-    fn finished(&self) -> bool {
-        self.prefix == self.game.goal
-    }
 }
 
 fn count_solutions<'game>(
@@ -117,39 +80,23 @@ pub fn solve(lines: &[String]) -> Solution {
         .map(|line| line.as_str())
         .collect();
 
-    let solution_a = goals
-        .iter()
-        .filter(|goal| {
-            let game = Game {
-                patterns: &patterns,
-                goal,
-            };
-            astar(State {
+    let (solution_a, solution_b): (usize, usize) = goals.iter().fold((0, 0), |(a, b), goal| {
+        let game = Game {
+            patterns: &patterns,
+            goal,
+        };
+        let mut memo = HashMap::new();
+        let sol = count_solutions(
+            &game,
+            State {
                 game: &game,
                 prefix: "".to_string(),
-            })
-            .is_some()
-        })
-        .count();
+            },
+            &mut memo,
+        );
 
-    let solution_b: usize = goals
-        .iter()
-        .map(|goal| {
-            let game = Game {
-                patterns: &patterns,
-                goal,
-            };
-            let mut memo = HashMap::new();
-            count_solutions(
-                &game,
-                State {
-                    game: &game,
-                    prefix: "".to_string(),
-                },
-                &mut memo,
-            )
-        })
-        .sum();
+        (a + if sol > 0 { 1 } else { 0 }, b + sol)
+    });
 
     (solution_a.to_string(), solution_b.to_string())
 }
