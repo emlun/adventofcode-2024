@@ -18,49 +18,20 @@ use std::collections::HashMap;
 
 use crate::common::Solution;
 
-#[derive(Eq, PartialEq)]
-struct Game<'pat> {
+fn count_solutions<'pat>(
     patterns: &'pat [&'pat str],
-    goal: &'pat str,
-}
-
-#[derive(Eq, PartialEq)]
-struct State<'game> {
-    game: &'game Game<'game>,
-    prefix: String,
-}
-
-fn count_solutions<'game>(
-    game: &Game<'game>,
-    state: State,
-    memo: &mut HashMap<&'game str, usize>,
+    rest: &'pat str,
+    memo: &mut HashMap<&'pat str, usize>,
 ) -> usize {
-    if let Some(rest) = game.goal.strip_prefix(&state.prefix) {
-        if let Some(m) = memo.get(rest) {
-            *m
-        } else if rest.is_empty() {
-            1
-        } else {
-            let solutions = game
-                .patterns
-                .iter()
-                .map(|pat| {
-                    count_solutions(
-                        game,
-                        State {
-                            game,
-                            prefix: format!("{}{}", state.prefix, pat),
-                        },
-                        memo,
-                    )
-                })
-                .sum();
-            memo.insert(rest, solutions);
-            solutions
-        }
-    } else {
-        0
-    }
+    memo.get(rest).copied().unwrap_or_else(|| {
+        let solutions = patterns
+            .iter()
+            .flat_map(|pat| rest.strip_prefix(pat))
+            .map(|rest| count_solutions(patterns, rest, memo))
+            .sum();
+        memo.insert(rest, solutions);
+        solutions
+    })
 }
 
 pub fn solve(lines: &[String]) -> Solution {
@@ -72,31 +43,17 @@ pub fn solve(lines: &[String]) -> Solution {
         .map(|s| s.trim())
         .collect();
 
-    let goals: Vec<&str> = lines
+    let mut memo = HashMap::new();
+    memo.insert("", 1);
+    let (solution_a, solution_b): (usize, usize) = lines
         .iter()
         .skip_while(|line| line.is_empty())
         .skip_while(|line| !line.is_empty())
         .filter(|line| !line.is_empty())
-        .map(|line| line.as_str())
-        .collect();
-
-    let (solution_a, solution_b): (usize, usize) = goals.iter().fold((0, 0), |(a, b), goal| {
-        let game = Game {
-            patterns: &patterns,
-            goal,
-        };
-        let mut memo = HashMap::new();
-        let sol = count_solutions(
-            &game,
-            State {
-                game: &game,
-                prefix: "".to_string(),
-            },
-            &mut memo,
-        );
-
-        (a + if sol > 0 { 1 } else { 0 }, b + sol)
-    });
+        .fold((0, 0), |(a, b), goal| {
+            let sol = count_solutions(&patterns, goal, &mut memo);
+            (a + if sol > 0 { 1 } else { 0 }, b + sol)
+        });
 
     (solution_a.to_string(), solution_b.to_string())
 }
