@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::{HashMap};
+
 use crate::{
     common::Solution,
     search::astar::{self, astar},
@@ -65,6 +67,39 @@ impl<'game> astar::State for State<'game> {
     }
 }
 
+fn count_solutions<'game>(
+    game: &Game<'game>,
+    state: State,
+    memo: &mut HashMap<&'game str, usize>,
+) -> usize {
+    if let Some(rest) = game.goal.strip_prefix(&state.prefix) {
+        if let Some(m) = memo.get(rest) {
+            *m
+        } else if rest.is_empty() {
+            1
+        } else {
+            let solutions = game
+                .patterns
+                .iter()
+                .map(|pat| {
+                    count_solutions(
+                        game,
+                        State {
+                            game,
+                            prefix: format!("{}{}", state.prefix, pat),
+                        },
+                        memo,
+                    )
+                })
+                .sum();
+            memo.insert(rest, solutions);
+            solutions
+        }
+    } else {
+        0
+    }
+}
+
 pub fn solve(lines: &[String]) -> Solution {
     let patterns: Vec<&str> = lines
         .iter()
@@ -97,5 +132,24 @@ pub fn solve(lines: &[String]) -> Solution {
         })
         .count();
 
-    (solution_a.to_string(), "".to_string())
+    let solution_b: usize = goals
+        .iter()
+        .map(|goal| {
+            let game = Game {
+                patterns: &patterns,
+                goal,
+            };
+            let mut memo = HashMap::new();
+            count_solutions(
+                &game,
+                State {
+                    game: &game,
+                    prefix: "".to_string(),
+                },
+                &mut memo,
+            )
+        })
+        .sum();
+
+    (solution_a.to_string(), solution_b.to_string())
 }
