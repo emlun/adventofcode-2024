@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::BTreeMap;
+
 use crate::common::Solution;
 
 #[derive(Eq, PartialEq)]
@@ -49,14 +51,32 @@ fn navigate(game: &Game) -> Vec<(usize, usize)> {
     states
 }
 
-fn find_cheats(path: &[(usize, (usize, usize))], cheat_time: usize) -> usize {
-    (0..path.len())
-        .flat_map(|i| ((i + 1)..path.len()).map(move |j| (path[i], path[j])))
-        .filter(|((ta, (ra, ca)), (tb, (rb, cb)))| {
-            let dist = ra.abs_diff(*rb) + ca.abs_diff(*cb);
-            dist <= cheat_time && tb - (ta + dist) >= 100
+fn find_cheats(
+    path: &[(usize, usize)],
+    path_r: &BTreeMap<usize, BTreeMap<usize, usize>>,
+    cheat_time: usize,
+) -> usize {
+    const CHEAT_THRESHOLD: usize = 100;
+    path.iter()
+        .take(path.len() - CHEAT_THRESHOLD + 1)
+        .enumerate()
+        .map(|(ta, (ra, ca))| {
+            path_r
+                .range((ra.saturating_sub(cheat_time))..=(ra + cheat_time))
+                .map(move |(rb, path_c)| {
+                    let dr = rb.abs_diff(*ra);
+                    let ct = cheat_time.saturating_sub(dr);
+                    path_c
+                        .range(ca.saturating_sub(ct)..=(ca + ct))
+                        .filter(move |(cb, tb)| {
+                            let dist = dr + ca.abs_diff(**cb);
+                            tb.saturating_sub(ta + dist) >= CHEAT_THRESHOLD
+                        })
+                        .count()
+                })
+                .sum::<usize>()
         })
-        .count()
+        .sum()
 }
 
 pub fn solve(lines: &[String]) -> Solution {
@@ -83,10 +103,17 @@ pub fn solve(lines: &[String]) -> Solution {
             },
         );
     let game = Game { walls, start, end };
-    let path: Vec<(usize, (usize, usize))> = navigate(&game).into_iter().enumerate().collect();
+    let path: Vec<(usize, usize)> = navigate(&game);
+    let path_r: BTreeMap<usize, BTreeMap<usize, usize>> =
+        path.iter()
+            .enumerate()
+            .fold(BTreeMap::new(), |mut path_r, (t, (r, c))| {
+                path_r.entry(*r).or_default().insert(*c, t);
+                path_r
+            });
 
     (
-        find_cheats(&path, 2).to_string(),
-        find_cheats(&path, 20).to_string(),
+        find_cheats(&path, &path_r, 2).to_string(),
+        find_cheats(&path, &path_r, 20).to_string(),
     )
 }
