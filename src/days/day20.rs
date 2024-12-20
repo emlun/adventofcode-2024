@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
-
 use crate::common::Solution;
 
 #[derive(Eq, PartialEq)]
@@ -51,44 +49,12 @@ fn navigate(game: &Game) -> Vec<(usize, usize)> {
     states
 }
 
-fn find_cheats(
-    uncheat_path: &HashMap<(usize, usize), usize>,
-    pos: (usize, usize),
-    cheated_time: usize,
-) -> Vec<((usize, usize), usize)> {
-    if cheated_time < 2 {
-        let (r, c) = pos;
-        [(r + 1, c), (r, c + 1), (r - 1, c), (r, c - 1)]
-            .into_iter()
-            .filter(|(rr, cc)| {
-                *rr >= 1
-                    && *cc >= 1
-                    && (uncheat_path.get(&(*rr, *cc)).is_some() || cheated_time <= 2)
-            })
-            .flat_map(|pos| find_cheats(uncheat_path, pos, cheated_time + 1))
-            .collect()
-    } else {
-        vec![(pos, cheated_time)]
-    }
-}
-
-fn solve_a(game: &Game) -> usize {
-    let path = navigate(game);
-    let time_to: HashMap<(usize, usize), usize> =
-        path.iter().enumerate().map(|(t, pos)| (*pos, t)).collect();
-
-    path.into_iter()
-        .flat_map(|cheat_start| {
-            let time_to = &time_to;
-            find_cheats(&time_to, cheat_start, 0)
-                .into_iter()
-                .filter(move |(cheat_end, _)| *cheat_end != cheat_start)
-                .flat_map(move |(cheat_end, cheated_time)| {
-                    let t0 = time_to[&cheat_start];
-                    let t1 = time_to.get(&cheat_end)?;
-                    let dt = t1.saturating_sub(t0 + cheated_time);
-                    Some(dt).filter(|dt| *dt >= 100)
-                })
+fn find_cheats(path: &[(usize, (usize, usize))], cheat_time: usize) -> usize {
+    (0..path.len())
+        .flat_map(|i| ((i + 1)..path.len()).map(move |j| (path[i], path[j])))
+        .filter(|((ta, (ra, ca)), (tb, (rb, cb)))| {
+            let dist = ra.abs_diff(*rb) + ca.abs_diff(*cb);
+            dist <= cheat_time && tb - (ta + dist) >= 100
         })
         .count()
 }
@@ -117,6 +83,10 @@ pub fn solve(lines: &[String]) -> Solution {
             },
         );
     let game = Game { walls, start, end };
+    let path: Vec<(usize, (usize, usize))> = navigate(&game).into_iter().enumerate().collect();
 
-    (solve_a(&game).to_string(), "".to_string())
+    (
+        find_cheats(&path, 2).to_string(),
+        find_cheats(&path, 20).to_string(),
+    )
 }
