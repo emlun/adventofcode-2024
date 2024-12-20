@@ -33,8 +33,8 @@ fn navigate(game: &Game) -> Vec<(usize, usize)> {
         let next_pos = [(r + 1, c), (r, c + 1), (r - 1, c), (r, c - 1)]
             .into_iter()
             .find(|(rr, cc)| {
-                (1..walls.len() - 1).contains(&rr)
-                    && (1..walls[0].len() - 1).contains(&cc)
+                (1..walls.len() - 1).contains(rr)
+                    && (1..walls[0].len() - 1).contains(cc)
                     && states
                         .len()
                         .checked_sub(2)
