@@ -14,23 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::{HashMap, HashSet};
+
 use crate::common::Solution;
 
-fn next(secret: u64) -> u64 {
+fn next(secret: i64) -> i64 {
     let secret = prune(mix(secret, secret * 64));
     let secret = prune(mix(secret, secret / 32));
     prune(mix(secret, secret * 2048))
 }
 
-fn mix(secret: u64, mixin: u64) -> u64 {
+fn mix(secret: i64, mixin: i64) -> i64 {
     secret ^ mixin
 }
 
-fn prune(secret: u64) -> u64 {
+fn prune(secret: i64) -> i64 {
     secret % 16777216
 }
 
-fn solve_a(inits: &[u64]) -> u64 {
+fn solve_a(inits: &[i64]) -> i64 {
     inits
         .iter()
         .copied()
@@ -42,12 +44,66 @@ fn solve_a(inits: &[u64]) -> u64 {
         .sum()
 }
 
+fn solve_b(inits: &[i64]) -> i64 {
+    let trigger_sets: HashMap<i64, HashMap<i64, HashSet<[i64; 4]>>> = inits
+        .iter()
+        .copied()
+        .map(|init| {
+            let triggers: HashMap<i64, HashSet<[i64; 4]>> =
+                std::iter::successors(Some(init), |secret| Some(next(*secret)))
+                    .take(2001)
+                    .scan((0, 0, 0, 0, 0), |(p0, p1, p2, p3, p4), secret| {
+                        let price = secret % 10;
+                        let out = Some((price, [*p2 - *p1, *p3 - *p2, *p4 - *p3, price - *p4]));
+                        (*p0, *p1, *p2, *p3, *p4) = (*p1, *p2, *p3, *p4, price);
+                        out
+                    })
+                    .skip(4)
+                    .fold(HashMap::new(), |mut triggers, (price, trigger)| {
+                        if !triggers
+                            .values()
+                            .any(|triggers| triggers.contains(&trigger))
+                        {
+                            triggers.entry(price).or_default().insert(trigger);
+                        }
+                        triggers
+                    });
+
+            (init, triggers)
+        })
+        .collect();
+
+    let all_all_triggers: HashSet<&[i64; 4]> = trigger_sets
+        .values()
+        .flat_map(|t| t.values())
+        .flatten()
+        .collect();
+
+    let best_profit: i64 = all_all_triggers
+        .into_iter()
+        .map(|trigger| {
+            trigger_sets
+                .values()
+                .flat_map(|triggers| {
+                    triggers
+                        .iter()
+                        .find(|(_, triggers)| triggers.contains(trigger))
+                        .map(|(profit, _)| *profit)
+                })
+                .sum::<i64>()
+        })
+        .max()
+        .unwrap();
+
+    best_profit
+}
+
 pub fn solve(lines: &[String]) -> Solution {
-    let inits: Vec<u64> = lines
+    let inits: Vec<i64> = lines
         .iter()
         .filter(|line| !line.is_empty())
         .map(|line| line.trim().parse().unwrap())
         .collect();
 
-    (solve_a(&inits).to_string(), "".to_string())
+    (solve_a(&inits).to_string(), solve_b(&inits).to_string())
 }
