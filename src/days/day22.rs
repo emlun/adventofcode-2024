@@ -45,11 +45,11 @@ fn solve_a(inits: &[i64]) -> i64 {
 }
 
 fn solve_b(inits: &[i64]) -> i64 {
-    let trigger_sets: HashMap<i64, HashMap<[i64; 4], i64>> = inits
+    let trigger_sets: HashMap<i64, HashMap<u32, i64>> = inits
         .iter()
         .copied()
         .map(|init| {
-            let triggers: HashMap<[i64; 4], i64> =
+            let triggers: HashMap<u32, i64> =
                 std::iter::successors(Some(init), |secret| Some(next(*secret)))
                     .take(2001)
                     .scan((0, 0, 0, 0, 0), |(p0, p1, p2, p3, p4), secret| {
@@ -59,8 +59,12 @@ fn solve_b(inits: &[i64]) -> i64 {
                         out
                     })
                     .skip(4)
-                    .fold(HashMap::new(), |mut triggers, (price, trigger)| {
-                        triggers.entry(trigger).or_insert(price);
+                    .fold(HashMap::new(), |mut triggers, (price, [d0, d1, d2, d3])| {
+                        let trigger_key = (((d0 + 10) as u32) << 15)
+                            | (((d1 + 10) as u32) << 10)
+                            | (((d2 + 10) as u32) << 5)
+                            | ((d3 + 10) as u32);
+                        triggers.entry(trigger_key).or_insert(price);
                         triggers
                     });
 
@@ -68,8 +72,7 @@ fn solve_b(inits: &[i64]) -> i64 {
         })
         .collect();
 
-    let all_all_triggers: HashSet<&[i64; 4]> =
-        trigger_sets.values().flat_map(|t| t.keys()).collect();
+    let all_all_triggers: HashSet<&u32> = trigger_sets.values().flat_map(|t| t.keys()).collect();
 
     let best_profit: i64 = all_all_triggers
         .into_iter()
