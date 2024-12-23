@@ -39,6 +39,31 @@ fn solve_a(connections: &HashMap<&str, HashSet<&str>>) -> usize {
         .count()
 }
 
+fn solve_b(connections: &HashMap<&str, HashSet<&str>>) -> String {
+    let groups: Vec<BTreeSet<&str>> =
+        connections.keys().fold(Vec::new(), |mut groups, computer| {
+            let mut new_groups = Vec::new();
+            for group in groups.iter_mut() {
+                if group.iter().all(|a| connections[a].contains(computer)) {
+                    new_groups.push(group.clone());
+                    group.insert(computer);
+                }
+            }
+            groups.push([*computer].into_iter().collect());
+            groups.extend(new_groups);
+            groups
+        });
+
+    let mut names: Vec<&str> = groups
+        .into_iter()
+        .max_by_key(|computers| computers.len())
+        .unwrap()
+        .into_iter()
+        .collect();
+    names.sort();
+    names.join(",")
+}
+
 pub fn solve(lines: &[String]) -> Solution {
     let connections: HashMap<&str, HashSet<&str>> = lines
         .iter()
@@ -50,5 +75,8 @@ pub fn solve(lines: &[String]) -> Solution {
             connections
         });
 
-    (solve_a(&connections).to_string(), "".to_string())
+    (
+        solve_a(&connections).to_string(),
+        solve_b(&connections).to_string(),
+    )
 }
