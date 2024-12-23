@@ -70,3 +70,4 @@ test_day!(day18, "232", "44,64");
 test_day!(day19, "342", "891192814474630");
 test_day!(day20, "1323", "983905");
 test_day!(day22, "15335183969", "1696");
+test_day!(day23, "1337", "aw,fk,gv,hi,hp,ip,jy,kc,lk,og,pj,re,sr");
