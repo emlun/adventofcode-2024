@@ -14,29 +14,47 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use crate::common::Solution;
 
+#[derive(Debug, Eq, PartialEq)]
 struct Gate<'gate> {
     a: &'gate str,
     b: &'gate str,
     op: Op,
 }
 
+#[derive(Debug, Eq, PartialEq)]
 enum Op {
     And,
     Or,
     Xor,
 }
 
-fn solve_a<'gate>(mut state: HashMap<&'gate str, bool>, gates: &HashMap<&'gate str, Gate>) -> u64 {
+fn assemble(state: &HashMap<&str, bool>, prefix: char) -> u64 {
+    state
+        .iter()
+        .flat_map(|(k, v)| {
+            let bit_i: u64 = k.strip_prefix(prefix)?.parse().ok()?;
+            Some((bit_i, if *v { 1 } else { 0 }))
+        })
+        .fold(0, |result, (bit_i, bit)| result | (bit << bit_i))
+}
+
+fn solve_a<'gate>(
+    mut state: HashMap<&'gate str, bool>,
+    gates: &HashMap<&'gate str, Gate>,
+    swaps: &HashMap<&'gate str, &'gate str>,
+) -> Option<u64> {
     while !gates
         .keys()
         .filter(|k| k.starts_with('z'))
         .all(|k| state.contains_key(k))
     {
-        for (rhs, lhs) in gates.iter() {
+        let mut infinite = true;
+        for (rhs, lhs) in gates {
+            let rhs = swaps.get(rhs).unwrap_or(rhs);
             if !state.contains_key(*rhs) {
                 if let (Some(&a), Some(&b)) = (state.get(lhs.a), state.get(lhs.b)) {
                     state.insert(
@@ -47,18 +65,161 @@ fn solve_a<'gate>(mut state: HashMap<&'gate str, bool>, gates: &HashMap<&'gate s
                             Op::Xor => (a && !b) || (!a && b),
                         },
                     );
+                    infinite = false;
                 }
             }
         }
+        if infinite {
+            return None;
+        }
     }
 
-    state
-        .into_iter()
-        .flat_map(|(k, v)| {
-            let bit_i: u64 = k.strip_prefix('z')?.parse().ok()?;
-            Some((bit_i, if v { 1 } else { 0 }))
-        })
-        .fold(0, |result, (bit_i, bit)| result | (bit << bit_i))
+    Some(assemble(&state, 'z'))
+}
+
+fn solve_b<'gate>(init: HashMap<&'gate str, bool>, gates: &HashMap<&'gate str, Gate>) -> String {
+    assert_eq!(gates.len(), (init.len() / 2 - 1) * 5 + 2);
+    let l = init.len() / 2;
+    let s: Vec<String> = (0..(l + 1)).map(|s| format!("s{:02}", s)).collect();
+    let x: Vec<String> = (0..(l + 1)).map(|s| format!("x{:02}", s)).collect();
+    let y: Vec<String> = (0..(l + 1)).map(|s| format!("y{:02}", s)).collect();
+    let z: Vec<String> = (0..(l + 1)).map(|s| format!("z{:02}", s)).collect();
+    let c: Vec<String> = (0..(l + 1)).map(|s| format!("c{:02}", s)).collect();
+    let a: Vec<String> = (0..(l + 1)).map(|s| format!("a{:02}", s)).collect();
+    let b: Vec<String> = (0..(l + 1)).map(|s| format!("b{:02}", s)).collect();
+
+    let correct_circuit: HashMap<&str, Gate> =
+        [("z00", "x00", "XOR", "y00"), ("c01", "x00", "AND", "y00")]
+            .iter()
+            .copied()
+            .chain((1..init.len() / 2).flat_map(|i| {
+                [
+                    (&s[i], &x[i], "XOR", &y[i]),
+                    (&z[i], &s[i], "XOR", &c[i]),
+                    (&a[i], &x[i], "AND", &y[i]),
+                    (&b[i], &s[i], "AND", &c[i]),
+                    (&c[i + 1], &a[i], "OR", &b[i]),
+                ]
+                .into_iter()
+                .map(|(rhs, a, op, b)| (rhs.as_str(), a.as_str(), op, b.as_str()))
+            }))
+            .map(|(rhs, a, op, b)| {
+                (
+                    rhs,
+                    Gate {
+                        a,
+                        b,
+                        op: match op {
+                            "AND" => Op::And,
+                            "OR" => Op::Or,
+                            "XOR" => Op::Xor,
+                            _ => unreachable!(),
+                        },
+                    },
+                )
+            })
+            .collect();
+
+    assert_eq!(gates.len(), correct_circuit.len());
+
+    let mut wrong: BTreeSet<&str> = BTreeSet::new();
+
+    {
+        match gates["z00"] {
+            Gate {
+                a: "x00",
+                b: "y00",
+                op: Op::Xor,
+            } => {}
+            _ => {
+                wrong.insert("z00");
+            }
+        };
+    }
+
+    for i in 1..l {
+        let zi = z[i].as_str();
+        let gate_zi = &gates[&zi];
+        let (si, gate_si) = gates
+            .iter()
+            .find(|(_, gate)| {
+                **gate
+                    == Gate {
+                        a: &x[i],
+                        b: &y[i],
+                        op: Op::Xor,
+                    }
+            })
+            .unwrap();
+
+        if gate_zi.op == Op::Xor {
+            if gate_zi.a == *si {
+                gate_zi.b
+            } else if gate_zi.b == *si {
+                gate_zi.a
+            } else {
+                if gates[gate_zi.a].op == Op::Or {
+                    wrong.insert(gate_zi.b);
+                    wrong.insert(si);
+                    continue;
+                } else if gates[gate_zi.b].op == Op::Or {
+                    wrong.insert(gate_zi.a);
+                    wrong.insert(si);
+                    continue;
+                } else {
+                    dbg!(zi, gate_zi, si, gate_si);
+                    todo!()
+                }
+            };
+        } else {
+            let (real_zi, _) = gates
+                .iter()
+                .find(|(_, gate)| gate.op == Op::Xor && (gate.a == *si || gate.b == *si))
+                .unwrap();
+            wrong.insert(zi);
+            wrong.insert(real_zi);
+        }
+    }
+
+    {
+        match gates["z01"] {
+            Gate {
+                a: z1a,
+                b: z1b,
+                op: Op::Xor,
+            } if (gates[z1a]
+                == Gate {
+                    a: "x01",
+                    b: "y01",
+                    op: Op::Xor,
+                }
+                && gates[z1b]
+                    == Gate {
+                        a: "x00",
+                        b: "y00",
+                        op: Op::And,
+                    })
+                || (gates[z1b]
+                    == Gate {
+                        a: "x01",
+                        b: "y01",
+                        op: Op::Xor,
+                    }
+                    && gates[z1a]
+                        == Gate {
+                            a: "x00",
+                            b: "y00",
+                            op: Op::And,
+                        }) => {}
+            _ => {
+                wrong.insert("z01");
+            }
+        };
+    }
+
+    assert_eq!(wrong.len(), 8);
+    let wrong = wrong.into_iter().collect::<Vec<_>>();
+    wrong.join(",")
 }
 
 pub fn solve(lines: &[String]) -> Solution {
@@ -80,11 +241,13 @@ pub fn solve(lines: &[String]) -> Solution {
             let (lhs, rhs) = line.split_once("->").unwrap();
             let (a, op_b) = lhs.split_once(' ').unwrap();
             let (op, b) = op_b.split_once(' ').unwrap();
+            let (a, b) = (a.trim(), b.trim());
+            let (a, b) = (std::cmp::min(a, b), std::cmp::max(a, b));
             (
                 rhs.trim(),
                 Gate {
-                    a: a.trim(),
-                    b: b.trim(),
+                    a,
+                    b,
                     op: match op.trim() {
                         "AND" => Op::And,
                         "OR" => Op::Or,
@@ -96,5 +259,10 @@ pub fn solve(lines: &[String]) -> Solution {
         })
         .collect();
 
-    (solve_a(init, &gates).to_string(), "".to_string())
+    (
+        solve_a(init.clone(), &gates, &HashMap::new())
+            .unwrap()
+            .to_string(),
+        solve_b(init, &gates).to_string(),
+    )
 }
