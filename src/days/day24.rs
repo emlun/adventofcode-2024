@@ -80,47 +80,9 @@ fn solve_a<'gate>(
 fn solve_b<'gate>(init: HashMap<&'gate str, bool>, gates: &HashMap<&'gate str, Gate>) -> String {
     assert_eq!(gates.len(), (init.len() / 2 - 1) * 5 + 2);
     let l = init.len() / 2;
-    let s: Vec<String> = (0..(l + 1)).map(|s| format!("s{:02}", s)).collect();
     let x: Vec<String> = (0..(l + 1)).map(|s| format!("x{:02}", s)).collect();
     let y: Vec<String> = (0..(l + 1)).map(|s| format!("y{:02}", s)).collect();
     let z: Vec<String> = (0..(l + 1)).map(|s| format!("z{:02}", s)).collect();
-    let c: Vec<String> = (0..(l + 1)).map(|s| format!("c{:02}", s)).collect();
-    let a: Vec<String> = (0..(l + 1)).map(|s| format!("a{:02}", s)).collect();
-    let b: Vec<String> = (0..(l + 1)).map(|s| format!("b{:02}", s)).collect();
-
-    let correct_circuit: HashMap<&str, Gate> =
-        [("z00", "x00", "XOR", "y00"), ("c01", "x00", "AND", "y00")]
-            .iter()
-            .copied()
-            .chain((1..init.len() / 2).flat_map(|i| {
-                [
-                    (&s[i], &x[i], "XOR", &y[i]),
-                    (&z[i], &s[i], "XOR", &c[i]),
-                    (&a[i], &x[i], "AND", &y[i]),
-                    (&b[i], &s[i], "AND", &c[i]),
-                    (&c[i + 1], &a[i], "OR", &b[i]),
-                ]
-                .into_iter()
-                .map(|(rhs, a, op, b)| (rhs.as_str(), a.as_str(), op, b.as_str()))
-            }))
-            .map(|(rhs, a, op, b)| {
-                (
-                    rhs,
-                    Gate {
-                        a,
-                        b,
-                        op: match op {
-                            "AND" => Op::And,
-                            "OR" => Op::Or,
-                            "XOR" => Op::Xor,
-                            _ => unreachable!(),
-                        },
-                    },
-                )
-            })
-            .collect();
-
-    assert_eq!(gates.len(), correct_circuit.len());
 
     let mut wrong: BTreeSet<&str> = BTreeSet::new();
 
@@ -177,42 +139,6 @@ fn solve_b<'gate>(init: HashMap<&'gate str, bool>, gates: &HashMap<&'gate str, G
             wrong.insert(zi);
             wrong.insert(real_zi);
         }
-    }
-
-    {
-        match gates["z01"] {
-            Gate {
-                a: z1a,
-                b: z1b,
-                op: Op::Xor,
-            } if (gates[z1a]
-                == Gate {
-                    a: "x01",
-                    b: "y01",
-                    op: Op::Xor,
-                }
-                && gates[z1b]
-                    == Gate {
-                        a: "x00",
-                        b: "y00",
-                        op: Op::And,
-                    })
-                || (gates[z1b]
-                    == Gate {
-                        a: "x01",
-                        b: "y01",
-                        op: Op::Xor,
-                    }
-                    && gates[z1a]
-                        == Gate {
-                            a: "x00",
-                            b: "y00",
-                            op: Op::And,
-                        }) => {}
-            _ => {
-                wrong.insert("z01");
-            }
-        };
     }
 
     assert_eq!(wrong.len(), 8);
