@@ -33,9 +33,7 @@ fn solve_a(connections: &HashMap<&str, HashSet<&str>>) -> usize {
         .collect();
     groups
         .into_iter()
-        .filter(|computers| {
-            computers.len() == 3 && computers.into_iter().any(|c| c.starts_with('t'))
-        })
+        .filter(|computers| computers.len() == 3 && computers.iter().any(|c| c.starts_with('t')))
         .count()
 }
 

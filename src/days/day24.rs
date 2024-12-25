@@ -157,19 +157,17 @@ fn solve_b<'gate>(init: HashMap<&'gate str, bool>, gates: &HashMap<&'gate str, G
                 gate_zi.b
             } else if gate_zi.b == *si {
                 gate_zi.a
+            } else if gates[gate_zi.a].op == Op::Or {
+                wrong.insert(gate_zi.b);
+                wrong.insert(si);
+                continue;
+            } else if gates[gate_zi.b].op == Op::Or {
+                wrong.insert(gate_zi.a);
+                wrong.insert(si);
+                continue;
             } else {
-                if gates[gate_zi.a].op == Op::Or {
-                    wrong.insert(gate_zi.b);
-                    wrong.insert(si);
-                    continue;
-                } else if gates[gate_zi.b].op == Op::Or {
-                    wrong.insert(gate_zi.a);
-                    wrong.insert(si);
-                    continue;
-                } else {
-                    dbg!(zi, gate_zi, si, gate_si);
-                    todo!()
-                }
+                dbg!(zi, gate_zi, si, gate_si);
+                todo!()
             };
         } else {
             let (real_zi, _) = gates
