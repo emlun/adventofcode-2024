@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::common::Solution;
+use std::collections::HashMap;
+
+use crate::{common::Solution, util::iter::WithSliding};
 
 const NUM_KEYPAD: &[(isize, isize)] = &[
     (2, 4),
@@ -36,70 +38,144 @@ const LEFT: usize = 1;
 const DOWN: usize = 2;
 const RIGHT: usize = 3;
 
-fn type_digit(
-    digit: usize,
-    current_keypad: &[(isize, isize)],
-    code_keypad: &[(isize, isize)],
-    prev_digit: usize,
-) -> Vec<Vec<usize>> {
-    let code_keypad_pos = code_keypad[prev_digit];
-    let (x, y) = code_keypad_pos;
-    let (tx, ty) = code_keypad[digit];
-    let dx = tx - x;
-    let dy = ty - y;
+type Presses = HashMap<(usize, usize), isize>;
 
-    let btn_x = if dx >= 0 { RIGHT } else { LEFT };
-    let btn_y = if dy > 0 { DOWN } else { UP };
-
-    let mut seq = Vec::new();
-
-    if code_keypad.contains(&(tx, y)) {
-        let mut seq_x_first = Vec::new();
-        seq_x_first.resize(dx.abs() as usize, btn_x);
-        seq_x_first.resize((dx.abs() + dy.abs()) as usize, btn_y);
-        seq_x_first.push(current_keypad.len() - 1);
-        seq.push(seq_x_first);
+fn merge_with<K, V, F>(mut a: HashMap<K, V>, b: HashMap<K, V>, f: F) -> HashMap<K, V>
+where
+    K: std::hash::Hash,
+    K: std::cmp::Eq,
+    V: Default,
+    F: Fn(&V, V) -> V,
+{
+    for (k, vb) in b {
+        let va = a.entry(k).or_default();
+        let vv = f(va, vb);
+        *va = vv;
     }
-    if code_keypad.contains(&(x, ty)) {
-        let mut seq_y_first = Vec::new();
-        seq_y_first.resize(dy.abs() as usize, btn_y);
-        seq_y_first.resize((dy.abs() + dx.abs()) as usize, btn_x);
-        seq_y_first.push(current_keypad.len() - 1);
-        if seq.is_empty() || seq[0] != seq_y_first {
-            seq.push(seq_y_first);
-        }
-    }
-    seq
+    a
 }
 
-fn type_code(
-    code: &[usize],
-    current_keypad: &[(isize, isize)],
-    code_keypad: &[(isize, isize)],
-    mut prev_digit: usize,
-) -> Vec<Vec<usize>> {
-    let mut options = type_digit(code[0], current_keypad, code_keypad, prev_digit);
-    prev_digit = code[0];
+fn expand_press(
+    (prev_btn, press_btn): (usize, usize),
+    prev_keypad: &[(isize, isize)],
+    next_keypad: &[(isize, isize)],
+    recursion_limit: usize,
+    memo: &mut HashMap<(usize, usize), Presses>,
+    memoize: bool,
+    prefer_x: &HashMap<(isize, isize), bool>,
+) -> Presses {
+    let expanded = if prev_keypad == next_keypad && memo.contains_key(&(prev_btn, press_btn)) {
+        memo[&(prev_btn, press_btn)].clone()
+    } else {
+        let (x, y) = prev_keypad[prev_btn];
+        let (tx, ty) = prev_keypad[press_btn];
+        let dx = tx - x;
+        let dy = ty - y;
 
-    for digit in &code[1..] {
-        let new_options = type_digit(*digit, current_keypad, code_keypad, prev_digit);
-        let mut dup_options = options.clone();
-        for opt in &mut options {
-            opt.extend(&new_options[0]);
-        }
-        if new_options.len() > 1 {
-            for opt in &mut dup_options {
-                opt.extend(&new_options[1]);
+        let btn_a = next_keypad.len() - 1;
+        let btn_x = if dx >= 0 { RIGHT } else { LEFT };
+        let btn_y = if dy >= 0 { DOWN } else { UP };
+
+        let x_first: Option<HashMap<(usize, usize), isize>> = if prev_keypad.contains(&(tx, y)) {
+            let mut current_btn = btn_a;
+            let mut x_first = HashMap::new();
+            if dx.abs() >= 1 {
+                *x_first.entry((current_btn, btn_x)).or_default() += 1;
+                *x_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
+                current_btn = btn_x;
             }
-            options.extend(dup_options);
-        }
-        prev_digit = *digit;
-    }
+            if dy.abs() >= 1 {
+                *x_first.entry((current_btn, btn_y)).or_default() += 1;
+                *x_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
+                current_btn = btn_y;
+            }
+            *x_first.entry((current_btn, btn_a)).or_default() += 1;
+            Some(x_first)
+        } else {
+            None
+        };
 
-    options
+        let y_first: Option<HashMap<(usize, usize), isize>> = if prev_keypad.contains(&(x, ty)) {
+            let mut current_btn = btn_a;
+            let mut y_first = HashMap::new();
+            if dy.abs() >= 1 {
+                *y_first.entry((current_btn, btn_y)).or_default() += 1;
+                *y_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
+                current_btn = btn_y;
+            }
+            if dx.abs() >= 1 {
+                *y_first.entry((current_btn, btn_x)).or_default() += 1;
+                *y_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
+                current_btn = btn_x;
+            }
+            *y_first.entry((current_btn, btn_a)).or_default() += 1;
+            Some(y_first)
+        } else {
+            None
+        };
+
+        let expanded = match (x_first, y_first) {
+            (None, Some(exp)) => exp,
+            (Some(exp), None) => exp,
+            (Some(x_first), Some(y_first)) if x_first == y_first => x_first,
+            (Some(x_first), Some(y_first)) => {
+                if *prefer_x.get(&(dx, dy)).unwrap_or(&true) {
+                    x_first
+                } else {
+                    y_first
+                }
+            }
+            (None, None) => unreachable!(),
+        };
+
+        if recursion_limit > 1
+            && !memo.contains_key(&(prev_btn, press_btn))
+            && prev_keypad == next_keypad
+            && memoize
+        {
+            // memo.insert((prev_btn, press_btn), expanded.clone());
+        }
+
+        expanded
+    };
+
+    expanded
 }
 
-fn solve_a(codes: &[&str]) -> usize {
+fn expand_presses(
+    presses: HashMap<(usize, usize), isize>,
+    prev_keypad: &[(isize, isize)],
+    next_keypad: &[(isize, isize)],
+    recursion_limit: usize,
+    memo: &mut HashMap<(usize, usize), Presses>,
+    memoize: bool,
+    prefer_x: &HashMap<(isize, isize), bool>,
+) -> Presses {
+    let expanded = presses
+        .iter()
+        .map(|(k, v)| (*k, *v))
+        .map(|((prev_btn, press_btn), count)| {
+            let expanded = expand_press(
+                (prev_btn, press_btn),
+                prev_keypad,
+                next_keypad,
+                recursion_limit,
+                memo,
+                memoize,
+                prefer_x,
+            );
+            expanded
+                .into_iter()
+                .map(|(btns, c)| (btns, c * count))
+                .collect()
+        })
+        .fold(HashMap::new(), |acc, presses| {
+            merge_with(acc, presses, |a, b| a + b)
+        });
+    expanded
+}
+
+fn solve_ab2(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize), bool>) -> usize {
     codes
         .iter()
         .map(|code| {
@@ -112,20 +188,66 @@ fn solve_a(codes: &[&str]) -> usize {
                 })
                 .collect::<Vec<_>>();
 
-            let lv1_options = type_code(&code, &DIR_KEYPAD, &NUM_KEYPAD, NUM_KEYPAD.len() - 1);
-            let lv2_options = lv1_options
+            let mut presses: HashMap<(usize, usize), isize> = [NUM_KEYPAD.len() - 1]
                 .iter()
-                .flat_map(|code| type_code(code, &DIR_KEYPAD, &DIR_KEYPAD, DIR_KEYPAD.len() - 1))
-                .collect::<Vec<_>>();
-            let lv3_options = lv2_options
-                .iter()
-                .flat_map(|code| type_code(code, &DIR_KEYPAD, &DIR_KEYPAD, DIR_KEYPAD.len() - 1))
-                .collect::<Vec<_>>();
+                .chain(code.iter())
+                .copied()
+                .sliding2()
+                .fold(HashMap::new(), |mut presses, (prev_btn, press_btn)| {
+                    *presses.entry((prev_btn, press_btn)).or_default() += 1;
+                    presses
+                });
 
-            let shortest_len = lv3_options.iter().map(|opt| opt.len()).min().unwrap();
-            shortest_len * num_code
+            let mut memo = HashMap::new();
+
+            presses = expand_presses(
+                presses, NUM_KEYPAD, DIR_KEYPAD, layers, &mut memo, true, prefer_x,
+            );
+
+            for i in 0..(layers - 1) {
+                presses = expand_presses(
+                    presses,
+                    DIR_KEYPAD,
+                    DIR_KEYPAD,
+                    layers - i,
+                    &mut memo,
+                    true,
+                    prefer_x,
+                );
+            }
+            let l = presses.values().sum::<isize>();
+            l as usize * num_code
         })
         .sum()
+}
+
+fn solve_ab(codes: &[&str], layers: usize) -> usize {
+    let mut prefer_x = HashMap::new();
+    let dxys: Vec<(isize, isize)> = (-3..=3)
+        .flat_map(|dx| (-3..=3).map(move |dy| (dx, dy)))
+        .filter(|(dx, dy)| *dx != 0 && *dy != 0)
+        .collect();
+    let mut best = solve_ab2(codes, layers, &prefer_x);
+
+    loop {
+        let mut changed = false;
+        for dxy in &dxys {
+            let pref = *prefer_x.get(dxy).unwrap_or(&true);
+            prefer_x.insert(*dxy, !pref);
+            let shortest = solve_ab2(codes, layers, &prefer_x);
+            if shortest < best {
+                best = shortest;
+                changed = true;
+            } else {
+                prefer_x.insert(*dxy, pref);
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+
+    best
 }
 
 pub fn solve(lines: &[String]) -> Solution {
@@ -135,5 +257,8 @@ pub fn solve(lines: &[String]) -> Solution {
         .map(|line| line.trim())
         .collect();
 
-    (solve_a(&codes).to_string(), "".to_string())
+    (
+        solve_ab(&codes, 3).to_string(),
+        solve_ab(&codes, 26).to_string(),
+    )
 }
