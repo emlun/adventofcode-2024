@@ -61,7 +61,6 @@ fn expand_press(
     next_keypad: &[(isize, isize)],
     recursion_limit: usize,
     memo: &mut HashMap<(usize, usize), Presses>,
-    memoize: bool,
     prefer_x: &HashMap<(isize, isize), bool>,
 ) -> Presses {
     let expanded = if prev_keypad == next_keypad && memo.contains_key(&(prev_btn, press_btn)) {
@@ -131,9 +130,8 @@ fn expand_press(
         if recursion_limit > 1
             && !memo.contains_key(&(prev_btn, press_btn))
             && prev_keypad == next_keypad
-            && memoize
         {
-            // memo.insert((prev_btn, press_btn), expanded.clone());
+            memo.insert((prev_btn, press_btn), expanded.clone());
         }
 
         expanded
@@ -148,7 +146,6 @@ fn expand_presses(
     next_keypad: &[(isize, isize)],
     recursion_limit: usize,
     memo: &mut HashMap<(usize, usize), Presses>,
-    memoize: bool,
     prefer_x: &HashMap<(isize, isize), bool>,
 ) -> Presses {
     let expanded = presses
@@ -161,7 +158,6 @@ fn expand_presses(
                 next_keypad,
                 recursion_limit,
                 memo,
-                memoize,
                 prefer_x,
             );
             expanded
@@ -198,12 +194,16 @@ fn solve_ab2(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize), b
                     presses
                 });
 
-            let mut memo = HashMap::new();
-
             presses = expand_presses(
-                presses, NUM_KEYPAD, DIR_KEYPAD, layers, &mut memo, true, prefer_x,
+                presses,
+                NUM_KEYPAD,
+                DIR_KEYPAD,
+                layers,
+                &mut HashMap::new(),
+                prefer_x,
             );
 
+            let mut memo = HashMap::new();
             for i in 0..(layers - 1) {
                 presses = expand_presses(
                     presses,
@@ -211,7 +211,6 @@ fn solve_ab2(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize), b
                     DIR_KEYPAD,
                     layers - i,
                     &mut memo,
-                    true,
                     prefer_x,
                 );
             }
