@@ -80,58 +80,42 @@ fn expand_presses(
                     let btn_x = if dx >= 0 { RIGHT } else { LEFT };
                     let btn_y = if dy >= 0 { DOWN } else { UP };
 
-                    let x_first: Option<HashMap<(usize, usize), isize>> =
-                        if prev_keypad.contains(&(tx, y)) {
-                            let mut current_btn = btn_a;
-                            let mut x_first = HashMap::new();
-                            if dx.abs() >= 1 {
-                                *x_first.entry((current_btn, btn_x)).or_default() += 1;
-                                *x_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
-                                current_btn = btn_x;
-                            }
-                            if dy.abs() >= 1 {
-                                *x_first.entry((current_btn, btn_y)).or_default() += 1;
-                                *x_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
-                                current_btn = btn_y;
-                            }
-                            *x_first.entry((current_btn, btn_a)).or_default() += 1;
-                            Some(x_first)
-                        } else {
-                            None
-                        };
+                    let x_first = if *prefer_x.get(&(dx, dy)).unwrap_or(&true) {
+                        prev_keypad.contains(&(tx, y))
+                    } else {
+                        !prev_keypad.contains(&(x, ty))
+                    };
 
-                    let y_first: Option<HashMap<(usize, usize), isize>> =
-                        if prev_keypad.contains(&(x, ty)) {
-                            let mut current_btn = btn_a;
-                            let mut y_first = HashMap::new();
-                            if dy.abs() >= 1 {
-                                *y_first.entry((current_btn, btn_y)).or_default() += 1;
-                                *y_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
-                                current_btn = btn_y;
-                            }
-                            if dx.abs() >= 1 {
-                                *y_first.entry((current_btn, btn_x)).or_default() += 1;
-                                *y_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
-                                current_btn = btn_x;
-                            }
-                            *y_first.entry((current_btn, btn_a)).or_default() += 1;
-                            Some(y_first)
-                        } else {
-                            None
-                        };
-
-                    let expanded = match (x_first, y_first) {
-                        (None, Some(exp)) => exp,
-                        (Some(exp), None) => exp,
-                        (Some(x_first), Some(y_first)) if x_first == y_first => x_first,
-                        (Some(x_first), Some(y_first)) => {
-                            if *prefer_x.get(&(dx, dy)).unwrap_or(&true) {
-                                x_first
-                            } else {
-                                y_first
-                            }
+                    let expanded = if x_first {
+                        let mut current_btn = btn_a;
+                        let mut x_first = HashMap::new();
+                        if dx.abs() >= 1 {
+                            *x_first.entry((current_btn, btn_x)).or_default() += 1;
+                            *x_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
+                            current_btn = btn_x;
                         }
-                        (None, None) => unreachable!(),
+                        if dy.abs() >= 1 {
+                            *x_first.entry((current_btn, btn_y)).or_default() += 1;
+                            *x_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
+                            current_btn = btn_y;
+                        }
+                        *x_first.entry((current_btn, btn_a)).or_default() += 1;
+                        x_first
+                    } else {
+                        let mut current_btn = btn_a;
+                        let mut y_first = HashMap::new();
+                        if dy.abs() >= 1 {
+                            *y_first.entry((current_btn, btn_y)).or_default() += 1;
+                            *y_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
+                            current_btn = btn_y;
+                        }
+                        if dx.abs() >= 1 {
+                            *y_first.entry((current_btn, btn_x)).or_default() += 1;
+                            *y_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
+                            current_btn = btn_x;
+                        }
+                        *y_first.entry((current_btn, btn_a)).or_default() += 1;
+                        y_first
                     };
 
                     if recursion_limit > 1
