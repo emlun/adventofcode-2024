@@ -55,91 +55,6 @@ where
     a
 }
 
-fn expand_press(
-    (prev_btn, press_btn): (usize, usize),
-    prev_keypad: &[(isize, isize)],
-    next_keypad: &[(isize, isize)],
-    recursion_limit: usize,
-    memo: &mut HashMap<(usize, usize), Presses>,
-    prefer_x: &HashMap<(isize, isize), bool>,
-) -> Presses {
-    let expanded = if prev_keypad == next_keypad && memo.contains_key(&(prev_btn, press_btn)) {
-        memo[&(prev_btn, press_btn)].clone()
-    } else {
-        let (x, y) = prev_keypad[prev_btn];
-        let (tx, ty) = prev_keypad[press_btn];
-        let dx = tx - x;
-        let dy = ty - y;
-
-        let btn_a = next_keypad.len() - 1;
-        let btn_x = if dx >= 0 { RIGHT } else { LEFT };
-        let btn_y = if dy >= 0 { DOWN } else { UP };
-
-        let x_first: Option<HashMap<(usize, usize), isize>> = if prev_keypad.contains(&(tx, y)) {
-            let mut current_btn = btn_a;
-            let mut x_first = HashMap::new();
-            if dx.abs() >= 1 {
-                *x_first.entry((current_btn, btn_x)).or_default() += 1;
-                *x_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
-                current_btn = btn_x;
-            }
-            if dy.abs() >= 1 {
-                *x_first.entry((current_btn, btn_y)).or_default() += 1;
-                *x_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
-                current_btn = btn_y;
-            }
-            *x_first.entry((current_btn, btn_a)).or_default() += 1;
-            Some(x_first)
-        } else {
-            None
-        };
-
-        let y_first: Option<HashMap<(usize, usize), isize>> = if prev_keypad.contains(&(x, ty)) {
-            let mut current_btn = btn_a;
-            let mut y_first = HashMap::new();
-            if dy.abs() >= 1 {
-                *y_first.entry((current_btn, btn_y)).or_default() += 1;
-                *y_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
-                current_btn = btn_y;
-            }
-            if dx.abs() >= 1 {
-                *y_first.entry((current_btn, btn_x)).or_default() += 1;
-                *y_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
-                current_btn = btn_x;
-            }
-            *y_first.entry((current_btn, btn_a)).or_default() += 1;
-            Some(y_first)
-        } else {
-            None
-        };
-
-        let expanded = match (x_first, y_first) {
-            (None, Some(exp)) => exp,
-            (Some(exp), None) => exp,
-            (Some(x_first), Some(y_first)) if x_first == y_first => x_first,
-            (Some(x_first), Some(y_first)) => {
-                if *prefer_x.get(&(dx, dy)).unwrap_or(&true) {
-                    x_first
-                } else {
-                    y_first
-                }
-            }
-            (None, None) => unreachable!(),
-        };
-
-        if recursion_limit > 1
-            && !memo.contains_key(&(prev_btn, press_btn))
-            && prev_keypad == next_keypad
-        {
-            memo.insert((prev_btn, press_btn), expanded.clone());
-        }
-
-        expanded
-    };
-
-    expanded
-}
-
 fn expand_presses(
     presses: HashMap<(usize, usize), isize>,
     prev_keypad: &[(isize, isize)],
@@ -152,14 +67,83 @@ fn expand_presses(
         .iter()
         .map(|(k, v)| (*k, *v))
         .map(|((prev_btn, press_btn), count)| {
-            let expanded = expand_press(
-                (prev_btn, press_btn),
-                prev_keypad,
-                next_keypad,
-                recursion_limit,
-                memo,
-                prefer_x,
-            );
+            let expanded =
+                if prev_keypad == next_keypad && memo.contains_key(&(prev_btn, press_btn)) {
+                    memo[&(prev_btn, press_btn)].clone()
+                } else {
+                    let (x, y) = prev_keypad[prev_btn];
+                    let (tx, ty) = prev_keypad[press_btn];
+                    let dx = tx - x;
+                    let dy = ty - y;
+
+                    let btn_a = next_keypad.len() - 1;
+                    let btn_x = if dx >= 0 { RIGHT } else { LEFT };
+                    let btn_y = if dy >= 0 { DOWN } else { UP };
+
+                    let x_first: Option<HashMap<(usize, usize), isize>> =
+                        if prev_keypad.contains(&(tx, y)) {
+                            let mut current_btn = btn_a;
+                            let mut x_first = HashMap::new();
+                            if dx.abs() >= 1 {
+                                *x_first.entry((current_btn, btn_x)).or_default() += 1;
+                                *x_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
+                                current_btn = btn_x;
+                            }
+                            if dy.abs() >= 1 {
+                                *x_first.entry((current_btn, btn_y)).or_default() += 1;
+                                *x_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
+                                current_btn = btn_y;
+                            }
+                            *x_first.entry((current_btn, btn_a)).or_default() += 1;
+                            Some(x_first)
+                        } else {
+                            None
+                        };
+
+                    let y_first: Option<HashMap<(usize, usize), isize>> =
+                        if prev_keypad.contains(&(x, ty)) {
+                            let mut current_btn = btn_a;
+                            let mut y_first = HashMap::new();
+                            if dy.abs() >= 1 {
+                                *y_first.entry((current_btn, btn_y)).or_default() += 1;
+                                *y_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
+                                current_btn = btn_y;
+                            }
+                            if dx.abs() >= 1 {
+                                *y_first.entry((current_btn, btn_x)).or_default() += 1;
+                                *y_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
+                                current_btn = btn_x;
+                            }
+                            *y_first.entry((current_btn, btn_a)).or_default() += 1;
+                            Some(y_first)
+                        } else {
+                            None
+                        };
+
+                    let expanded = match (x_first, y_first) {
+                        (None, Some(exp)) => exp,
+                        (Some(exp), None) => exp,
+                        (Some(x_first), Some(y_first)) if x_first == y_first => x_first,
+                        (Some(x_first), Some(y_first)) => {
+                            if *prefer_x.get(&(dx, dy)).unwrap_or(&true) {
+                                x_first
+                            } else {
+                                y_first
+                            }
+                        }
+                        (None, None) => unreachable!(),
+                    };
+
+                    if recursion_limit > 1
+                        && !memo.contains_key(&(prev_btn, press_btn))
+                        && prev_keypad == next_keypad
+                    {
+                        memo.insert((prev_btn, press_btn), expanded.clone());
+                    }
+
+                    expanded
+                };
+
             expanded
                 .into_iter()
                 .map(|(btns, c)| (btns, c * count))
