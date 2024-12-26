@@ -66,10 +66,8 @@ fn expand_presses(
         .iter()
         .map(|(k, v)| (*k, *v))
         .map(|((prev_btn, press_btn), count)| {
-            let expanded =
-                if prev_keypad == next_keypad && memo.contains_key(&(prev_btn, press_btn)) {
-                    memo[&(prev_btn, press_btn)].clone()
-                } else {
+            memo.entry((prev_btn, press_btn))
+                .or_insert_with(|| {
                     let (x, y) = prev_keypad[prev_btn];
                     let (tx, ty) = prev_keypad[press_btn];
                     let dx = tx - x;
@@ -117,16 +115,10 @@ fn expand_presses(
                         y_first
                     };
 
-                    if !memo.contains_key(&(prev_btn, press_btn)) {
-                        memo.insert((prev_btn, press_btn), expanded.clone());
-                    }
-
                     expanded
-                };
-
-            expanded
-                .into_iter()
-                .map(|(btns, c)| (btns, c * count))
+                })
+                .iter()
+                .map(|(btns, c)| (*btns, *c * count))
                 .collect()
         })
         .fold(HashMap::new(), |acc, presses| {
