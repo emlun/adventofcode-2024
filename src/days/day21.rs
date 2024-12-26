@@ -139,7 +139,7 @@ fn expand_presses(
     expanded
 }
 
-fn solve_ab2(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize), bool>) -> usize {
+fn expand_layers(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize), bool>) -> usize {
     codes
         .iter()
         .map(|code| {
@@ -194,14 +194,14 @@ fn solve_ab(codes: &[&str], layers: usize) -> usize {
         .flat_map(|dx| (-3..=3).map(move |dy| (dx, dy)))
         .filter(|(dx, dy)| *dx != 0 && *dy != 0 && (*dx, *dy) != (-2, 3) && (*dx, *dy) != (2, -3))
         .collect();
-    let mut best = solve_ab2(codes, layers, &prefer_x);
+    let mut best = expand_layers(codes, layers, &prefer_x);
 
     loop {
         let mut changed = false;
         for dxy in &dxys {
             let pref = *prefer_x.get(dxy).unwrap_or(&true);
             prefer_x.insert(*dxy, !pref);
-            let shortest = solve_ab2(codes, layers, &prefer_x);
+            let shortest = expand_layers(codes, layers, &prefer_x);
             if shortest < best {
                 best = shortest;
                 changed = true;
