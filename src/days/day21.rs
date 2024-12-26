@@ -59,7 +59,6 @@ fn expand_presses(
     presses: HashMap<(usize, usize), isize>,
     prev_keypad: &[(isize, isize)],
     next_keypad: &[(isize, isize)],
-    recursion_limit: usize,
     memo: &mut HashMap<(usize, usize), Presses>,
     prefer_x: &HashMap<(isize, isize), bool>,
 ) -> Presses {
@@ -118,10 +117,7 @@ fn expand_presses(
                         y_first
                     };
 
-                    if recursion_limit > 1
-                        && !memo.contains_key(&(prev_btn, press_btn))
-                        && prev_keypad == next_keypad
-                    {
+                    if !memo.contains_key(&(prev_btn, press_btn)) {
                         memo.insert((prev_btn, press_btn), expanded.clone());
                     }
 
@@ -166,21 +162,13 @@ fn expand_layers(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize
                 presses,
                 NUM_KEYPAD,
                 DIR_KEYPAD,
-                layers,
                 &mut HashMap::new(),
                 prefer_x,
             );
 
             let mut memo = HashMap::new();
-            for i in 0..(layers - 1) {
-                presses = expand_presses(
-                    presses,
-                    DIR_KEYPAD,
-                    DIR_KEYPAD,
-                    layers - i,
-                    &mut memo,
-                    prefer_x,
-                );
+            for _ in 0..(layers - 1) {
+                presses = expand_presses(presses, DIR_KEYPAD, DIR_KEYPAD, &mut memo, prefer_x);
             }
             let l = presses.values().sum::<isize>();
             l as usize * num_code
