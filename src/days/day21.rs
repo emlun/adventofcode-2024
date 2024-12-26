@@ -190,9 +190,9 @@ fn solve_ab2(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize), b
 
 fn solve_ab(codes: &[&str], layers: usize) -> usize {
     let mut prefer_x = HashMap::new();
-    let dxys: Vec<(isize, isize)> = (-3..=3)
+    let dxys: Vec<(isize, isize)> = (-2..=2)
         .flat_map(|dx| (-3..=3).map(move |dy| (dx, dy)))
-        .filter(|(dx, dy)| *dx != 0 && *dy != 0)
+        .filter(|(dx, dy)| *dx != 0 && *dy != 0 && (*dx, *dy) != (-2, 3) && (*dx, *dy) != (2, -3))
         .collect();
     let mut best = solve_ab2(codes, layers, &prefer_x);
 
