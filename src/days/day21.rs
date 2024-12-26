@@ -62,7 +62,7 @@ fn expand_presses(
     memo: &mut HashMap<(usize, usize), Presses>,
     prefer_x: &HashMap<(isize, isize), bool>,
 ) -> Presses {
-    let expanded = presses
+    presses
         .iter()
         .map(|(k, v)| (*k, *v))
         .map(|((prev_btn, press_btn), count)| {
@@ -83,38 +83,26 @@ fn expand_presses(
                         !prev_keypad.contains(&(x, ty))
                     };
 
-                    let expanded = if x_first {
-                        let mut current_btn = btn_a;
-                        let mut x_first = HashMap::new();
-                        if dx.abs() >= 1 {
-                            *x_first.entry((current_btn, btn_x)).or_default() += 1;
-                            *x_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
-                            current_btn = btn_x;
-                        }
-                        if dy.abs() >= 1 {
-                            *x_first.entry((current_btn, btn_y)).or_default() += 1;
-                            *x_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
-                            current_btn = btn_y;
-                        }
-                        *x_first.entry((current_btn, btn_a)).or_default() += 1;
-                        x_first
+                    let order = if x_first {
+                        [(btn_x, dx), (btn_y, dy), (btn_a, 1)]
                     } else {
-                        let mut current_btn = btn_a;
-                        let mut y_first = HashMap::new();
-                        if dy.abs() >= 1 {
-                            *y_first.entry((current_btn, btn_y)).or_default() += 1;
-                            *y_first.entry((btn_y, btn_y)).or_default() += dy.abs() - 1;
-                            current_btn = btn_y;
-                        }
-                        if dx.abs() >= 1 {
-                            *y_first.entry((current_btn, btn_x)).or_default() += 1;
-                            *y_first.entry((btn_x, btn_x)).or_default() += dx.abs() - 1;
-                            current_btn = btn_x;
-                        }
-                        *y_first.entry((current_btn, btn_a)).or_default() += 1;
-                        y_first
+                        [(btn_y, dy), (btn_x, dx), (btn_a, 1)]
                     };
 
+                    let (expanded, _) = order.iter().copied().fold(
+                        (HashMap::new(), btn_a),
+                        |(mut exp, current_btn), (btn, d)| {
+                            if d.abs() >= 1 {
+                                *exp.entry((current_btn, btn)).or_default() += 1;
+                                if d.abs() > 1 {
+                                    *exp.entry((btn, btn)).or_default() += d.abs() - 1;
+                                }
+                                (exp, btn)
+                            } else {
+                                (exp, current_btn)
+                            }
+                        },
+                    );
                     expanded
                 })
                 .iter()
@@ -123,8 +111,7 @@ fn expand_presses(
         })
         .fold(HashMap::new(), |acc, presses| {
             merge_with(acc, presses, |a, b| a + b)
-        });
-    expanded
+        })
 }
 
 fn expand_layers(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize), bool>) -> usize {
@@ -190,11 +177,9 @@ fn solve_ab(codes: &[&str], layers: usize) -> usize {
             }
         }
         if !changed {
-            break;
+            break best;
         }
     }
-
-    best
 }
 
 pub fn solve(lines: &[String]) -> Solution {
