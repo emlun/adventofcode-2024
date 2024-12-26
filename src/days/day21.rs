@@ -18,7 +18,7 @@ use std::collections::HashMap;
 
 use crate::{common::Solution, util::iter::WithSliding};
 
-const NUM_KEYPAD: &[(isize, isize)] = &[
+const NUM_KEYPAD: &[(i8, i8)] = &[
     (2, 4),
     (1, 3),
     (2, 3),
@@ -32,13 +32,13 @@ const NUM_KEYPAD: &[(isize, isize)] = &[
     (3, 4),
 ];
 
-const DIR_KEYPAD: &[(isize, isize)] = &[(2, 1), (1, 2), (2, 2), (3, 2), (3, 1)];
-const UP: usize = 0;
-const LEFT: usize = 1;
-const DOWN: usize = 2;
-const RIGHT: usize = 3;
+const DIR_KEYPAD: &[(i8, i8)] = &[(2, 1), (1, 2), (2, 2), (3, 2), (3, 1)];
+const UP: u8 = 0;
+const LEFT: u8 = 1;
+const DOWN: u8 = 2;
+const RIGHT: u8 = 3;
 
-type Presses = HashMap<(usize, usize), isize>;
+type Presses = HashMap<(u8, u8), usize>;
 
 fn merge_with<K, V, F>(mut a: HashMap<K, V>, b: HashMap<K, V>, f: F) -> HashMap<K, V>
 where
@@ -56,11 +56,11 @@ where
 }
 
 fn expand_presses(
-    presses: HashMap<(usize, usize), isize>,
-    prev_keypad: &[(isize, isize)],
-    next_keypad: &[(isize, isize)],
-    memo: &mut HashMap<(usize, usize), Presses>,
-    prefer_x: &HashMap<(isize, isize), bool>,
+    presses: Presses,
+    prev_keypad: &[(i8, i8)],
+    next_keypad: &[(i8, i8)],
+    memo: &mut HashMap<(u8, u8), Presses>,
+    prefer_x: &HashMap<(i8, i8), bool>,
 ) -> Presses {
     presses
         .iter()
@@ -68,12 +68,12 @@ fn expand_presses(
         .map(|((prev_btn, press_btn), count)| {
             memo.entry((prev_btn, press_btn))
                 .or_insert_with(|| {
-                    let (x, y) = prev_keypad[prev_btn];
-                    let (tx, ty) = prev_keypad[press_btn];
+                    let (x, y) = prev_keypad[usize::from(prev_btn)];
+                    let (tx, ty) = prev_keypad[usize::from(press_btn)];
                     let dx = tx - x;
                     let dy = ty - y;
 
-                    let btn_a = next_keypad.len() - 1;
+                    let btn_a = (next_keypad.len() - 1) as u8;
                     let btn_x = if dx >= 0 { RIGHT } else { LEFT };
                     let btn_y = if dy >= 0 { DOWN } else { UP };
 
@@ -95,7 +95,8 @@ fn expand_presses(
                             if d.abs() >= 1 {
                                 *exp.entry((current_btn, btn)).or_default() += 1;
                                 if d.abs() > 1 {
-                                    *exp.entry((btn, btn)).or_default() += d.abs() - 1;
+                                    *exp.entry((btn, btn)).or_default() +=
+                                        usize::from(d.abs_diff(0) - 1);
                                 }
                                 (exp, btn)
                             } else {
@@ -114,7 +115,7 @@ fn expand_presses(
         })
 }
 
-fn expand_layers(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize), bool>) -> usize {
+fn expand_layers(codes: &[&str], layers: usize, prefer_x: &HashMap<(i8, i8), bool>) -> usize {
     codes
         .iter()
         .map(|code| {
@@ -123,11 +124,11 @@ fn expand_layers(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize
                 .chars()
                 .map(|ch| match ch {
                     'A' => 10,
-                    ch => ch.to_digit(10).unwrap() as usize,
+                    ch => ch.to_digit(10).unwrap() as u8,
                 })
                 .collect::<Vec<_>>();
 
-            let mut presses: HashMap<(usize, usize), isize> = [NUM_KEYPAD.len() - 1]
+            let mut presses: Presses = [(NUM_KEYPAD.len() - 1) as u8]
                 .iter()
                 .chain(code.iter())
                 .copied()
@@ -149,15 +150,15 @@ fn expand_layers(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize
             for _ in 0..(layers - 1) {
                 presses = expand_presses(presses, DIR_KEYPAD, DIR_KEYPAD, &mut memo, prefer_x);
             }
-            let l = presses.values().sum::<isize>();
-            l as usize * num_code
+            let l = presses.values().sum::<usize>();
+            l * num_code
         })
         .sum()
 }
 
 fn solve_ab(codes: &[&str], layers: usize) -> usize {
     let mut prefer_x = HashMap::new();
-    let dxys: Vec<(isize, isize)> = (-2..=2)
+    let dxys: Vec<(i8, i8)> = (-2..=2)
         .flat_map(|dx| (-3..=3).map(move |dy| (dx, dy)))
         .filter(|(dx, dy)| *dx != 0 && *dy != 0 && (*dx, *dy) != (-2, 3) && (*dx, *dy) != (2, -3))
         .collect();
