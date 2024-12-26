@@ -38,6 +38,8 @@ const LEFT: usize = 1;
 const DOWN: usize = 2;
 const RIGHT: usize = 3;
 
+type Presses = HashMap<(usize, usize), isize>;
+
 fn merge_with<K, V, F>(mut a: HashMap<K, V>, b: HashMap<K, V>, f: F) -> HashMap<K, V>
 where
     K: std::hash::Hash,
@@ -58,10 +60,10 @@ fn expand_press(
     prev_keypad: &[(isize, isize)],
     next_keypad: &[(isize, isize)],
     recursion_limit: usize,
-    memo: &mut HashMap<(usize, usize), HashMap<(usize, usize), isize>>,
+    memo: &mut HashMap<(usize, usize), Presses>,
     memoize: bool,
     prefer_x: &HashMap<(isize, isize), bool>,
-) -> HashMap<(usize, usize), isize> {
+) -> Presses {
     let expanded = if prev_keypad == next_keypad && memo.contains_key(&(prev_btn, press_btn)) {
         memo[&(prev_btn, press_btn)].clone()
     } else {
@@ -145,10 +147,10 @@ fn expand_presses(
     prev_keypad: &[(isize, isize)],
     next_keypad: &[(isize, isize)],
     recursion_limit: usize,
-    memo: &mut HashMap<(usize, usize), HashMap<(usize, usize), isize>>,
+    memo: &mut HashMap<(usize, usize), Presses>,
     memoize: bool,
     prefer_x: &HashMap<(isize, isize), bool>,
-) -> HashMap<(usize, usize), isize> {
+) -> Presses {
     let expanded = presses
         .iter()
         .map(|(k, v)| (*k, *v))
@@ -199,7 +201,7 @@ fn solve_ab2(codes: &[&str], layers: usize, prefer_x: &HashMap<(isize, isize), b
             let mut memo = HashMap::new();
 
             presses = expand_presses(
-                presses, NUM_KEYPAD, DIR_KEYPAD, layers, &mut memo, true, &prefer_x,
+                presses, NUM_KEYPAD, DIR_KEYPAD, layers, &mut memo, true, prefer_x,
             );
 
             for i in 0..(layers - 1) {
