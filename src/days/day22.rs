@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::common::Solution;
 
@@ -45,45 +45,38 @@ fn solve_a(inits: &[i64]) -> i64 {
 }
 
 fn solve_b(inits: &[i64]) -> i64 {
-    let trigger_sets: HashMap<i64, HashMap<u32, i64>> = inits
-        .iter()
-        .copied()
-        .map(|init| {
-            let triggers: HashMap<u32, i64> =
-                std::iter::successors(Some(init), |secret| Some(next(*secret)))
-                    .take(2001)
-                    .scan((0, 0, 0, 0, 0), |(p0, p1, p2, p3, p4), secret| {
-                        let price = secret % 10;
-                        let out = Some((price, [*p2 - *p1, *p3 - *p2, *p4 - *p3, price - *p4]));
-                        (*p0, *p1, *p2, *p3, *p4) = (*p1, *p2, *p3, *p4, price);
-                        out
-                    })
-                    .skip(4)
-                    .fold(HashMap::new(), |mut triggers, (price, [d0, d1, d2, d3])| {
-                        let trigger_key = (((d0 + 10) as u32) << 15)
-                            | (((d1 + 10) as u32) << 10)
-                            | (((d2 + 10) as u32) << 5)
-                            | ((d3 + 10) as u32);
-                        triggers.entry(trigger_key).or_insert(price);
-                        triggers
-                    });
+    let mut solutions: HashMap<u32, i64> = HashMap::new();
+    let mut best_profit = 0;
 
-            (init, triggers)
-        })
-        .collect();
+    for init in inits.iter().copied() {
+        let triggers: HashMap<u32, i64> =
+            std::iter::successors(Some(init), |secret| Some(next(*secret)))
+                .take(2001)
+                .scan((0, 0, 0, 0, 0), |(p0, p1, p2, p3, p4), secret| {
+                    let price = secret % 10;
+                    let out = Some((price, [*p2 - *p1, *p3 - *p2, *p4 - *p3, price - *p4]));
+                    (*p0, *p1, *p2, *p3, *p4) = (*p1, *p2, *p3, *p4, price);
+                    out
+                })
+                .skip(4)
+                .fold(HashMap::new(), |mut triggers, (price, [d0, d1, d2, d3])| {
+                    let trigger_key = (((d0 + 10) as u32) << 15)
+                        | (((d1 + 10) as u32) << 10)
+                        | (((d2 + 10) as u32) << 5)
+                        | ((d3 + 10) as u32);
+                    triggers.entry(trigger_key).or_insert(price);
+                    triggers
+                });
 
-    let all_all_triggers: HashSet<&u32> = trigger_sets.values().flat_map(|t| t.keys()).collect();
-
-    let best_profit: i64 = all_all_triggers
-        .into_iter()
-        .map(|trigger| {
-            trigger_sets
-                .values()
-                .flat_map(|triggers| triggers.get(trigger))
-                .sum::<i64>()
-        })
-        .max()
-        .unwrap();
+        for (trigger, price) in triggers {
+            let sol = solutions.entry(trigger).or_default();
+            let tot_profit = *sol + price;
+            if tot_profit > best_profit {
+                best_profit = tot_profit;
+            }
+            *sol = tot_profit;
+        }
+    }
 
     best_profit
 }
