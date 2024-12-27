@@ -52,18 +52,14 @@ fn solve_b(inits: &[i64]) -> i64 {
         let triggers: HashMap<u32, i64> =
             std::iter::successors(Some(init), |secret| Some(next(*secret)))
                 .take(2001)
-                .scan((0, 0, 0, 0, 0), |(p0, p1, p2, p3, p4), secret| {
+                .scan((0, 0), |(trigger_key, p4), secret| {
                     let price = secret % 10;
-                    let out = Some((price, [*p2 - *p1, *p3 - *p2, *p4 - *p3, price - *p4]));
-                    (*p0, *p1, *p2, *p3, *p4) = (*p1, *p2, *p3, *p4, price);
-                    out
+                    *trigger_key = ((*trigger_key & 0x7fff) << 5) | ((price - *p4 + 10) as u32);
+                    *p4 = price;
+                    Some((price, *trigger_key))
                 })
                 .skip(4)
-                .fold(HashMap::new(), |mut triggers, (price, [d0, d1, d2, d3])| {
-                    let trigger_key = (((d0 + 10) as u32) << 15)
-                        | (((d1 + 10) as u32) << 10)
-                        | (((d2 + 10) as u32) << 5)
-                        | ((d3 + 10) as u32);
+                .fold(HashMap::new(), |mut triggers, (price, trigger_key)| {
                     triggers.entry(trigger_key).or_insert(price);
                     triggers
                 });
